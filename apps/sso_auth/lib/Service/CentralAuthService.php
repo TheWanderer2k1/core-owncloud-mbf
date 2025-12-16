@@ -21,6 +21,8 @@ class CentralAuthService {
     private string $realmName;
     private string $clientId;
     private string $clientSecret;
+    private string $adminUser;
+    private string $adminPassword;
 
     public function __construct(IClientService $http, IConfig $config, ILogger $logger, \OCP\IUserManager $userManager) {
         $this->http = $http;
@@ -28,10 +30,12 @@ class CentralAuthService {
         $this->logger = $logger;
         $this->userManager = $userManager;
 
-        $this->ssoUrl       = $config->getAppValue('sso_auth', 'sso_url', '');
-        $this->realmName    = $config->getAppValue('sso_auth', 'realm', '');
-        $this->clientId     = $config->getAppValue('sso_auth', 'client_id', '');
-        $this->clientSecret = $config->getAppValue('sso_auth', 'client_secret', '');
+        $this->ssoUrl        = $config->getAppValue('sso_auth', 'sso_url', '');
+        $this->realmName     = $config->getAppValue('sso_auth', 'realm', '');
+        $this->clientId      = $config->getAppValue('sso_auth', 'client_id', '');
+        $this->clientSecret  = $config->getAppValue('sso_auth', 'client_secret', '');
+        $this->adminUser     = $config->getAppValue('sso_auth', 'admin_user', '');
+        $this->adminPassword = $config->getAppValue('sso_auth', 'admin_password', '');
     }
 
     public function loginWithEmailPassword(string $email, string $password): ?string {
