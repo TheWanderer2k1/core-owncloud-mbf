@@ -162,6 +162,19 @@ $(document).ready(function () {
 	if($('#pass2').length) {
 		$('#pass2').showPassword().keyup();
 	}
+
+	// Password validation function
+	function validatePassword(password) {
+		// Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
+		var pattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
+		
+		if (!pattern.test(password)) {
+			return [t('settings', 'Password must be at least 8 characters and contain uppercase, lowercase, number, and special character')];
+		}
+		
+		return [];
+	}
+
 	$("#passwordbutton").click(function () {
 		var isIE8or9 = $('html').hasClass('lte9');
 		// FIXME - TODO - once support for IE8 and IE9 is dropped
@@ -170,6 +183,17 @@ $(document).ready(function () {
 		// is simply set as the value to look like a placeholder
 		if ($('#pass1').val() !== '' && $('#pass2').val() !== ''
 			&& !(isIE8or9 && $('#pass2').val() === $('#pass2').attr('placeholder'))) {
+			
+			// Validate new password
+			var newPassword = $('#pass2').val();
+			var validationErrors = validatePassword(newPassword);
+			if (validationErrors.length > 0) {
+				$('#password-error').html(validationErrors.join('<br>'));
+				$('#password-changed').removeClass('inlineblock').addClass('hidden');
+				$('#password-error').removeClass('hidden').addClass('inlineblock');
+				return false;
+			}
+			
 			// Serialize the data
 			var post = $("#passwordform").serialize();
 			$('#passwordchanged').hide();

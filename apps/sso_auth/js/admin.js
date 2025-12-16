@@ -40,6 +40,25 @@ $(document).ready(function () {
              return;
         }
 
+        var adminUser = $form.find('#admin_user').val().trim();
+        if (adminUser === '') {
+             OC.Notification.showTemporary(t('sso_auth', 'Admin email is required.'));
+             return;
+        }
+
+        // Validate email format
+        var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(adminUser)) {
+             OC.Notification.showTemporary(t('sso_auth', 'Admin email is invalid.'));
+             return;
+        }
+
+        var adminPassword = $form.find('#admin_password').val().trim();
+        if (adminPassword === '') {
+             OC.Notification.showTemporary(t('sso_auth', 'Admin password is required.'));
+             return;
+        }
+
         $submitBtn.text('Saving...').prop('disabled', true);
 
         $.ajax({

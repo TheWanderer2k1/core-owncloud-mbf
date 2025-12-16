@@ -10,11 +10,13 @@ class UserBackend extends Database {
 
     private $centralAuthService;
     private $logger;
+    private $userManager;
 
-    public function __construct(CentralAuthService $centralAuthService, ILogger $logger) {
+    public function __construct(CentralAuthService $centralAuthService, ILogger $logger, \OCP\IUserManager $userManager) {
         parent::__construct();
         $this->centralAuthService = $centralAuthService;
         $this->logger = $logger;
+        $this->userManager = $userManager;
     }
 
     /**
@@ -25,8 +27,27 @@ class UserBackend extends Database {
      */
     public function checkPassword($uid, $password) {
         try {
-            $userUid = $this->centralAuthService->loginWithEmailPassword($uid, $password);
-            if ($userUid) return $userUid;
+            // If the uid is not an email (e.g. looks like a UUID or plain username), try to resolve to email
+            $loginName = $uid;
+            if (strpos($uid, '@') === false) {
+                $user = $this->userManager->get($uid);
+                if ($user !== null) {
+                    $email = $user->getEMailAddress();
+                    if (!empty($email)) $loginName = $email;
+                }
+            }
+            $userUid = $this->centralAuthService->loginWithEmailPassword($loginName, $password);
+            if ($userUid) {
+                try {
+                    $db = \OC::$server->getDatabaseConnection();
+                    $qb = $db->getQueryBuilder();
+                    $qb->update('accounts')
+                       ->set('backend', $qb->createNamedParameter(get_class($this)))
+                       ->where($qb->expr()->eq('lower_user_id', $qb->createNamedParameter(strtolower($userUid))));
+                    $qb->execute();
+                } catch (\Throwable $e) {}
+                return $userUid;
+            }
             return false;
         } catch (\Throwable $e) {
             $this->logger->error("Error checkPassword: " . $e->getMessage());
@@ -40,5 +61,22 @@ class UserBackend extends Database {
      */
     public function getBackendName() {
         return 'SSO Authentication';
+    }
+    /**
+     * set password
+     * @param string $uid The username
+     * @param string $password The new password
+     * @return bool
+     */
+    public function setPassword($uid, $password) {
+        // Validate password: min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
+        $pattern = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/';
+        
+        if (!preg_match($pattern, $password)) {
+            $this->logger->error("Password validation failed for $uid: Password must be at least 8 characters and contain uppercase, lowercase, number, and special character");
+            return false;
+        }
+        
+        return $this->centralAuthService->updatePasswordUserSso($uid, $password);
     }
 }
