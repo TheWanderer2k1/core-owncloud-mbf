@@ -7,8 +7,6 @@ use OCA\SsoAuth\Controller\ConfigController;
 use OCA\SsoAuth\Service\CentralAuthService;
 use OCP\AppFramework\App;
 use OCA\SsoAuth\UserBackend;
-use OCP\IUserManager;
-use OCP\ILogger;
 
 class Application extends App {
     public function __construct(array $params = []) {
@@ -22,19 +20,7 @@ class Application extends App {
                 $server->getHTTPClientService(),
                 $server->getConfig(),
                 $server->getLogger(),
-                $server->getUserManager()
-            );
-        });
-
-        /**
-         * UserBackend (SSO)
-         */
-        $container->registerService(UserBackend::class, function ($c) {
-            $server = $c->query('ServerContainer');
-            return new UserBackend(
-                $c->query(CentralAuthService::class),
-                $server->getLogger(),
-                $server->getUserManager()
+                $server->getUserManager(),
             );
         });
 
@@ -49,6 +35,17 @@ class Application extends App {
             );
         });
         
+        /**
+         * UserBackend (SSO)
+         */
+        $container->registerService(UserBackend::class, function ($c) {
+            $server = $c->query('ServerContainer');
+            return new UserBackend(
+                $c->query(CentralAuthService::class),
+                $server->getLogger(),
+            );
+        });
+
         /**
          * Register UserBackend into OwnCloud
          */
