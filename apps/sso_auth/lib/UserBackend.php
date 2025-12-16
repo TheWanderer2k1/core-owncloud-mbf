@@ -68,8 +68,15 @@ class UserBackend extends Database {
      * @param string $password The new password
      * @return bool
      */
-    public function setPassword($uid, $password, $currentPassword = null) {
-        $this->logger->error("Error setPassword: " . $uid . " - " . $password . " - " . $currentPassword);
+    public function setPassword($uid, $password) {
+        // Validate password: min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
+        $pattern = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/';
+        
+        if (!preg_match($pattern, $password)) {
+            $this->logger->error("Password validation failed for $uid: Password must be at least 8 characters and contain uppercase, lowercase, number, and special character");
+            return false;
+        }
+        
         return $this->centralAuthService->updatePasswordUserSso($uid, $password);
     }
 }
