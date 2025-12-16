@@ -5,19 +5,16 @@ namespace OCA\SsoAuth;
 use OCA\SsoAuth\Service\CentralAuthService;
 use OCP\ILogger;
 use OC\User\Database;
-use OCP\IUserManager;
 
 class UserBackend extends Database {
 
     private $centralAuthService;
     private $logger;
-    private $userManager;
 
-    public function __construct(CentralAuthService $centralAuthService, ILogger $logger, IUserManager $userManager) {
+    public function __construct(CentralAuthService $centralAuthService, ILogger $logger) {
         parent::__construct();
         $this->centralAuthService = $centralAuthService;
         $this->logger = $logger;
-        $this->userManager = $userManager;
     }
 
     /**
@@ -29,33 +26,19 @@ class UserBackend extends Database {
     public function checkPassword($uid, $password) {
         try {
             $userUid = $this->centralAuthService->loginWithEmailPassword($uid, $password);
-            $this->logger->error('SSO login successs' . $userUid);
-            if (!$userUid) return false;
-
-            $this->ensureLocalUser($userUid);
-
-            return $userUid;
-        } catch (\Throwable $e) {
-            $this->logger->error('SSO login failed' . $e);
+            if ($userUid) return $userUid;
             return false;
+        } catch (\Throwable $e) {
+            $this->logger->error("Error checkPassword: " . $e->getMessage());
         }
+        return false;
     }
-
-    private function ensureLocalUser(string $uid): void {
-        if ($this->userManager->userExists($uid)) {
-            return;
-        }
-
-        $this->userManager->createUserFromBackend($uid, $this);
-        $this->logger->error("Created local user for SSO uid=$uid");
-    }
-
     
     /**
      * Backend name to be shown in user management
      * @return string the name of the backend to be shown
      */
     public function getBackendName() {
-        return 'SSO Auth (Database)';
+        return 'SSO Authentication';
     }
 }
