@@ -43,6 +43,7 @@ class Application extends App {
             return new UserBackend(
                 $c->query(CentralAuthService::class),
                 $server->getLogger(),
+                $server->getUserManager()
             );
         });
 
