@@ -41,6 +41,18 @@ style('sso_auth', 'admin');
                 placeholder="<?php p($l->t('Enter Client Secret')); ?>" value="<?php p($_['client_secret']); ?>"
                 autocomplete="off" autocorrect="off" />
         </div>
+        <div class="form-group">
+            <label for="admin_user"><?php p($l->t('Admin Email')); ?></label>
+            <input type="text" name="admin_user" id="admin_user"
+                placeholder="<?php p($l->t('Enter Admin Email')); ?>" value="<?php p($_['admin_user']); ?>"
+                autocomplete="off" autocorrect="off" />
+        </div>
+        <div class="form-group">
+            <label for="admin_password"><?php p($l->t('Admin Password')); ?></label>
+            <input type="text" name="admin_password" id="admin_password"
+                placeholder="<?php p($l->t('Enter Admin Password')); ?>" value="<?php p($_['admin_password']); ?>"
+                autocomplete="off" autocorrect="off" />
+        </div>
         <div class="form-group" style="margin-left: 10px;">
             <label></label>
             <button type="submit" id="admin-sso-submit">

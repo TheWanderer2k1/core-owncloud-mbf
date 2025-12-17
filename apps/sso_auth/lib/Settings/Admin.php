@@ -26,6 +26,8 @@ class Admin implements ISettings {
         $tmpl->assign('realm', $this->config->getAppValue('sso_auth', 'realm', ''));
         $tmpl->assign('client_id', $this->config->getAppValue('sso_auth', 'client_id', ''));
         $tmpl->assign('client_secret', $this->config->getAppValue('sso_auth', 'client_secret', ''));
+        $tmpl->assign('admin_user', $this->config->getAppValue('sso_auth', 'admin_user', ''));
+        $tmpl->assign('admin_password', $this->config->getAppValue('sso_auth', 'admin_password', ''));
 
         return $tmpl;
     }
