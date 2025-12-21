@@ -93,10 +93,10 @@ class RegisterController extends Controller {
         }
     }
 
-    public function login(string $identifier, string $password) {
+    public function login(string $ssoIdentifier, string $password) {
         try {
             // validate inputs
-            if (empty($identifier)) {
+            if (empty($ssoIdentifier)) {
                 return new DataResponse(['status' => 'error', 'message' => 'Email or Phone number is required'], 400);
             }
 
@@ -107,7 +107,7 @@ class RegisterController extends Controller {
                 return new DataResponse(['status' => 'error', 'message' => 'Password is required'], 400);
             }
 
-            $token = $this->getToken($identifier, $password);
+            $token = $this->getToken($ssoIdentifier, $password);
             if (!$token) {
                 return new DataResponse(['status' => 'error', 'message' => 'Invalid credentials'], 401);
             }
