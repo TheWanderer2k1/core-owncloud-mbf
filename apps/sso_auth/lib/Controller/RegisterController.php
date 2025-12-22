@@ -5,11 +5,11 @@ namespace OCA\SsoAuth\Controller;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\Http\TemplateResponse;
+use OCA\SsoAuth\Service\LogService;
 use OCP\IRequest;
 use OCP\IConfig;
 use OCP\Http\Client\IClientService;
 use OCP\IUserManager;
-use OCP\ILogger;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
@@ -17,7 +17,7 @@ class RegisterController extends Controller {
     private IConfig $config;
     private IClientService $http;
     private IUserManager $userManager;
-    private ILogger $logger;
+    private $logger;
     private string $ssoUrl;
     private string $realmName;
     private string $clientId;
@@ -26,7 +26,7 @@ class RegisterController extends Controller {
     private string $adminPassword;
 
 
-    public function __contruct($appName, IRequest $request, IConfig $config, IClientService $http, IUserManager $userManager, ILogger $logger) {
+    public function __construct($appName, IRequest $request, IConfig $config, IClientService $http, IUserManager $userManager, LogService $logger) {
         parent::__construct($appName, $request);
         $this->config = $config;
         $this->http = $http;
@@ -40,6 +40,18 @@ class RegisterController extends Controller {
         $this->adminPassword = $config->getAppValue('sso_auth', 'admin_password', '');
     }
 
+    /**
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     * @PublicPage
+     */
+    public function index() {
+        return new TemplateResponse($this->appName, 'register');
+    }
+
+    /**
+     * @PublicPage
+     */
     public function register(string $email, string $phoneNumber, string $password) {
         try {
             // validate inputs
@@ -47,13 +59,14 @@ class RegisterController extends Controller {
                 return new DataResponse(['status' => 'error', 'message' => 'Invalid email address'], 400);
             }
 
-            if (empty($phoneNumber)) {
-                return new DataResponse(['status' => 'error', 'message' => 'Phone number is required'], 400);
+            $phonePattern = '/^(?:\+84|0)(3|5|7|8|9)[0-9]{8}$/';
+            if (empty($phoneNumber) || !preg_match($phonePattern, $phoneNumber)) {
+                return new DataResponse(['status' => 'error', 'message' => 'Invalid phone number'], 400);
             }
 
-            // maybe implement password regex validation here
-            if (empty($password) || strlen($password) < 8) {
-                return new DataResponse(['status' => 'error', 'message' => 'Password must be at least 8 characters long'], 400);
+            $passwordPattern = '/^(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).{8,}$/';
+            if (empty($password) || !preg_match($passwordPattern, $password)) {
+                return new DataResponse(['status' => 'error', 'message' => 'Password must contain at least one uppercase letter, one special character, and be at least 8 characters long'], 400);
             }
 
             // call api check SSO account
@@ -65,18 +78,17 @@ class RegisterController extends Controller {
                     'email' => $email,
                     'phoneNumber' => $phoneNumber,
                     'message' => 'SSO Account already exists. Please log in to create your MobiDrive account.'
-                ]
+                ];
                 return new TemplateResponse($this->appName, 'login', $parameters);
             }
 
             // call api create SSO account
-            $sso_account = $this->createSSOAccount($email, $phoneNumber, $password);
-            if ($sso_account === null || !isset($sso_account['id'])) {
+            $uid = $this->createSSOAccount($email, $phoneNumber, $password);
+            if (!$uid) {
                 throw new \Exception("Failed to create SSO account");
             }
 
             // create OwnCloud user with sso id as uid
-            $uid = $sso_account['id'];
             $newUser = $this->createDriveUserFromSSOId($uid, $email);
             if (!$newUser) {
                 throw new \Exception("Failed to create Drive user for SSO id $uid");
@@ -136,24 +148,28 @@ class RegisterController extends Controller {
         }
     }
 
-    private function getToken(string $username = $this->adminUser, string $password = $this->adminPassword): ?string {
+    private function getToken(string $username = null, string $password = null): ?string {
         try {
+            $username = $username ?? $this->adminUser;
+            $password = $password ?? $this->adminPassword;
             $client = $this->http->newClient();
-            $url = rtrim($this->ssoUrl, '/') . '/token';
+            $url = rtrim($this->ssoUrl, '/') . '/login';
             $response = $client->post($url, [
                 'body' => json_encode([
                     'username' => $username,
                     'password' => $password,
                     'realmName' => $this->realmName,
                     'clientId' => $this->clientId,
-                    'clientSecret' => $this->clientSecret,
-                    'grant_type' => 'password'
+                    'clientSecret' => $this->clientSecret
                 ]),
                 'headers' => ['Content-Type' => 'application/json']
             ]);
             $body = (string) $response->getBody();
             $data = json_decode($body, true);
-            if (!isset($data['access_token'])) return null;
+            if (!isset($data['access_token'])) {
+                $this->logger->debug("SSO get token response: " . $body);
+                throw new \Exception("No access_token in response");
+            }
             return $data['access_token'];
         } catch (\Throwable $e) {
             $this->logger->error("SSO token error: " . $e->getMessage());
@@ -163,6 +179,7 @@ class RegisterController extends Controller {
 
     private function checkSSOAccount(string $email, string $phoneNumber): bool {
         try {
+            return false; // check will be implemented later
             $client = $this->http->newClient();
             $url = rtrim($this->ssoUrl, '/') . '/checkAccount';
             $token = $this->getToken();
@@ -188,10 +205,10 @@ class RegisterController extends Controller {
         }
     }
 
-    private function createSSOAccount(string $email, string $phoneNumber, string $password) {
+    private function createSSOAccount(string $email, string $phoneNumber, string $password): ?string {
         try {
             $client = $this->http->newClient();
-            $url = rtrim($this->ssoUrl, '/') . '/createAccount';
+            $url = rtrim($this->ssoUrl, '/') . '/partner/create?clientId=' . urlencode($this->clientId);
             $token = $this->getToken();
             if ($token === null) {
                 throw new \Exception("Unable to get admin token for SSO");
@@ -200,7 +217,10 @@ class RegisterController extends Controller {
                 'body' => json_encode([
                     'email' => $email,
                     'phoneNumber' => $phoneNumber,
-                    'password' => $password
+                    'password' => $password,
+                    'loginType' => 0,
+                    'loginTwoFactor' => 0,
+                    'status' => 1
                 ]),
                 'headers' => [
                     'Content-Type' => 'application/json',
@@ -209,7 +229,11 @@ class RegisterController extends Controller {
             ]);
             $body = (string) $response->getBody();
             $data = json_decode($body, true);
-            return $data;
+            if (!$data["success"]) {
+                $this->logger->debug("SSO create account response: " . $body);
+                throw new \Exception("Response indicates failure");
+            }
+            return $data["result"]["userId"];
         } catch (\Throwable $e) {
             $this->logger->error("SSO create account error: " . $e->getMessage());
             return null;
@@ -237,6 +261,7 @@ class RegisterController extends Controller {
                 }
 
                 // basic config for new user
+                $newUser->setEmailAddress($email);
                 $newUser->setDisplayName($email);
                 $newUser->setQuota($this->config->getSystemValue('default_user_quota', '15 GB'));
                 $defaultGroup = \OC::$server->getGroupManager()->get('default'); // default group must exist first

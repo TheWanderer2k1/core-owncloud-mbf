@@ -13,13 +13,18 @@ return [
             'verb' => 'POST'
         ],
         [
+            'name' => 'register#index',
+            'url'  => '/register',
+            'verb' => 'GET'
+        ],
+        [
             'name' => 'register#login',
-            'url'  => '/login',
+            'url'  => '/register/login',
             'verb' => 'POST'
         ],
         [
             'name' => 'register#register',
-            'url'  => '/register',
+            'url'  => '/register/create',
             'verb' => 'POST'
         ],
     ]

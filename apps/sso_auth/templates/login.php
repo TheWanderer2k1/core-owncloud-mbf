@@ -14,7 +14,7 @@ style('sso_auth', 'login');
         <div class="form-group">
             <label for="ssoIdentifier"><?php p($l->t('Username or Phone Number')); ?></label>
             <input type="text" name="ssoIdentifier" id="ssoIdentifier" placeholder="<?php p($l->t('Enter your username or phone number')); ?>"
-                value="" autocomplete="off" autocorrect="off" autofocus />
+                value="<?php p($_['email']) ?>" autocomplete="off" autocorrect="off" autofocus />
         </div>
         <div class="form-group">
             <label for="password"><?php p($l->t('Password')); ?></label>
