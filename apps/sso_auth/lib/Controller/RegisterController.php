@@ -76,8 +76,7 @@ class RegisterController extends Controller {
             if ($exists) {
                 $parameters = [
                     'email' => $email,
-                    'phoneNumber' => $phoneNumber,
-                    'message' => 'SSO Account already exists. Please log in to create your MobiDrive account.'
+                    'phoneNumber' => $phoneNumber
                 ];
                 return new TemplateResponse($this->appName, 'login', $parameters);
             }
@@ -184,26 +183,27 @@ class RegisterController extends Controller {
 
     private function checkSSOAccount(string $email, string $phoneNumber): bool {
         try {
-            return true; // check will be implemented later
             $client = $this->http->newClient();
-            $url = rtrim($this->ssoUrl, '/') . '/checkAccount';
-            $token = $this->getToken();
-            if ($token === null) {
-                throw new \Exception("Unable to get admin token for SSO");
-            }
+            // $url = rtrim($this->ssoUrl, '/') . '/checkAccount';
+            $url = 'https://api-sso.1erp.vn/user/public/check-email-phone-exist';
             $response = $client->post($url, [
                 'body' => json_encode([
-                    'email' => $email,
-                    'phoneNumber' => $phoneNumber
+                    'username' => $email,
+                    'phoneNumber' => $phoneNumber,
+                    'clientId' => $this->clientId,
+                    'realmName' => $this->realmName
                 ]),
                 'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Authorization' => 'Bearer ' . $token
+                    'Content-Type' => 'application/json'
                 ]
             ]);
             $body = (string) $response->getBody();
             $data = json_decode($body, true);
-            return isset($data['exists']) ? (bool)$data['exists'] : false;
+            if (!$data["success"]) {
+                $this->logger->debug("SSO check account response: " . $body);
+                throw new \Exception("Response indicates failure");
+            }
+            return $data["success"];
         } catch (\Throwable $e) {
             $this->logger->error("SSO check account error: " . $e->getMessage());
             return false;
