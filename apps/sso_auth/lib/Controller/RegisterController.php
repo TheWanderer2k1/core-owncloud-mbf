@@ -185,7 +185,7 @@ class RegisterController extends Controller {
         try {
             $client = $this->http->newClient();
             // $url = rtrim($this->ssoUrl, '/') . '/checkAccount';
-            $url = 'https://api-sso.1erp.vn/user/public/check-email-phone-exist';
+            $url = 'https://api-sso.1erp.vn/user/public/check-email-phone-none-exist';
             $response = $client->post($url, [
                 'body' => json_encode([
                     'username' => $email,
@@ -199,11 +199,11 @@ class RegisterController extends Controller {
             ]);
             $body = (string) $response->getBody();
             $data = json_decode($body, true);
-            if (!$data["success"]) {
+            if (!isset($data["success"])) {
                 $this->logger->debug("SSO check account response: " . $body);
-                throw new \Exception("Response indicates failure");
+                throw new \Exception("There is no success field in response");
             }
-            return $data["success"];
+            return !(bool)$data["success"];
         } catch (\Throwable $e) {
             $this->logger->error("SSO check account error: " . $e->getMessage());
             return false;
@@ -261,6 +261,7 @@ class RegisterController extends Controller {
             } else {
                 $randomPassword = \OC::$server->getSecureRandom()->generate(10); // generate random password here, user should login via SSO account only
                 $newUser = $this->userManager->createUser($ssoId, $randomPassword);
+                $this->logger->debug("Created new Drive user with uid $ssoId");
                 if (!$newUser) {
                     throw new \Exception("Failed to create Drive user for SSO id $ssoId");
                 }
