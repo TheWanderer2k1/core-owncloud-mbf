@@ -76,7 +76,7 @@ document.addEventListener("DOMContentLoaded", function() {
             OC.Notification.showTemporary(t('sso_auth', 'Registration successful. You can now log in.'));
             setTimeout(() => {
                 window.location.href = OC.generateUrl('/login');
-            }, 1000);
+            }, 1500);
         } catch (error) {
             console.error('Error during registration:', error);
             OC.Notification.showTemporary(t('sso_auth', 'An unexpected error occurred. Please try again later.'));
