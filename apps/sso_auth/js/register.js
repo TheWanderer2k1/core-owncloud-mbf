@@ -56,10 +56,19 @@ document.addEventListener("DOMContentLoaded", function() {
                 method: 'POST',
                 body: new FormData(form),
             });
-            submitBtn.disabled = false;
             submitBtnSpan.textContent = t('sso_auth', 'Register');
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("text/html")) {
+                // replace the current document with the returned HTML
+                const html = await response.text();
+                document.open();
+                document.write(html);
+                document.close();
+                return;
+            }
             const result = await response.json();
             if (!response.ok) {
+                submitBtn.disabled = false;
                 OC.Notification.showTemporary(t('sso_auth', result.message || 'Registration failed.'));
                 return;
             }
