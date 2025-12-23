@@ -105,30 +105,35 @@ class RegisterController extends Controller {
         }
     }
 
+    /**
+     * @PublicPage
+     */
     public function login(string $ssoIdentifier, string $password) {
         try {
             // validate inputs
-            if (empty($ssoIdentifier)) {
-                return new DataResponse(['status' => 'error', 'message' => 'Email or Phone number is required'], 400);
+            $phonePattern = '/^(?:\+84|0)(3|5|7|8|9)[0-9]{8}$/';
+            if (empty($ssoIdentifier) || (!preg_match($phonePattern, $ssoIdentifier) && !filter_var($ssoIdentifier, FILTER_VALIDATE_EMAIL))) {
+                return new DataResponse(['status' => 'error', 'message' => 'Invalid phone number or email'], 400);
             }
 
-            // implement check regex for email or phone number
-            // 
-
-            if (empty($password)) {
-                return new DataResponse(['status' => 'error', 'message' => 'Password is required'], 400);
+            $passwordPattern = '/^(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).{8,}$/';
+            if (empty($password) || !preg_match($passwordPattern, $password)) {
+                return new DataResponse(['status' => 'error', 'message' => 'Password must contain at least one uppercase letter, one special character, and be at least 8 characters long'], 400);
             }
 
             $token = $this->getToken($ssoIdentifier, $password);
             if (!$token) {
                 return new DataResponse(['status' => 'error', 'message' => 'Invalid credentials'], 401);
             }
+
             // decode token to get sso id
-            $decoded = (array) JWT::decode($token, new Key($this->clientSecret, 'HS256'));
-            $uid = $decoded['sid'] ?? null;
+            $decoded = (array) JWT::jsonDecode(JWT::urlsafeB64Decode(explode('.', $token)[1])); // no signature verification
+            $uid = $decoded['sub'] ?? null;
             $email = $decoded['email'] ?? null;
+            $this->logger->info("Decoded SSO token for uid: $uid, email: $email");
             if (!$uid) {
-                return new DataResponse(['status' => 'error', 'message' => 'Invalid token received'], 500);
+                $this->logger->debug("Invalid token payload: " . json_encode($decoded));
+                throw new \Exception("Invalid token payload");
             }
 
             // create Drive user
@@ -141,7 +146,7 @@ class RegisterController extends Controller {
             // put this in a thread
             // $this->sendEmail($email, "Your SSO account has been created. Email: $email");
 
-            return new DataResponse(['status' => 'success', 'message' => 'Drive account created. Please return to main page to login.'], 200);
+            return new DataResponse(['status' => 'success', 'message' => 'Drive account created. Please return to main page to login using your SSO credentials.'], 200);
         } catch (\Exception $e) {
             $this->logger->error('Login error: ' . $e->getMessage());
             return new DataResponse(['status' => 'error', 'message' => 'An error occurred during login'], 500);
@@ -179,7 +184,7 @@ class RegisterController extends Controller {
 
     private function checkSSOAccount(string $email, string $phoneNumber): bool {
         try {
-            return false; // check will be implemented later
+            return true; // check will be implemented later
             $client = $this->http->newClient();
             $url = rtrim($this->ssoUrl, '/') . '/checkAccount';
             $token = $this->getToken();
@@ -245,7 +250,7 @@ class RegisterController extends Controller {
         return true;
     }
 
-    private function createDriveUserFromSSOId(string $ssoId, string $email): ?\OCP\IUser {
+    private function createDriveUserFromSSOId(string $ssoId, string $email = null): ?\OCP\IUser {
         try {
             // double check to ensure user does not already exist
             $newUser = null;
@@ -254,15 +259,17 @@ class RegisterController extends Controller {
                 $this->logger->info("User with uid $ssoId already exists in Drive");
                 $newUser = $existingUser;
             } else {
-                $randomPassword = '123'; // generate random password here, user should login via SSO account only
+                $randomPassword = \OC::$server->getSecureRandom()->generate(10); // generate random password here, user should login via SSO account only
                 $newUser = $this->userManager->createUser($ssoId, $randomPassword);
                 if (!$newUser) {
                     throw new \Exception("Failed to create Drive user for SSO id $ssoId");
                 }
 
                 // basic config for new user
-                $newUser->setEmailAddress($email);
-                $newUser->setDisplayName($email);
+                if ($email) {
+                    $newUser->setEmailAddress($email);
+                    $newUser->setDisplayName($email);
+                }
                 $newUser->setQuota($this->config->getSystemValue('default_user_quota', '15 GB'));
                 $defaultGroup = \OC::$server->getGroupManager()->get('default'); // default group must exist first
                 $defaultGroup->addUser($newUser);

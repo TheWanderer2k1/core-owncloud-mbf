@@ -7,7 +7,7 @@ style('sso_auth', 'login');
 <div class="sso-auth-login-container">
     <h2 class="app-name"><?php p($l->t('SSO Authentication'));?></h2>
     <p>
-        <em><?php p($l->t('Please log in using your Single Sign-On (SSO) credentials.')); ?></em>
+        <em><?php p($l->t('Your SSO account has been existed. Please log in using your Single Sign-On (SSO) credentials to create your MobiDrive account.')); ?></em>
     </p>
     <form id="sso-auth-login-form" action="<?php p(\OC::$server->getURLGenerator()->linkToRoute('sso_auth.register.login')); ?>" method="post" autocapitalize="none" novalidate>
         <input type="hidden" name="requesttoken" value="<?php p($_['requesttoken']) ?>">
