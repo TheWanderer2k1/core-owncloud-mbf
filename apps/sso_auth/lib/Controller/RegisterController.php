@@ -93,10 +93,6 @@ class RegisterController extends Controller {
                 throw new \Exception("Failed to create Drive user for SSO id $uid");
             }
 
-            // call api send mail to user with sso account details
-            // put this in a thread
-            // $this->sendEmail($email, "Your SSO account has been created. Email: $email");
-
             return new DataResponse(['status' => 'success', 'message' => 'Registration successful. Please return to log in page.'], 200);
         } catch (\Exception $e) {
             $this->logger->error('Registration error: ' . $e->getMessage());
@@ -140,10 +136,6 @@ class RegisterController extends Controller {
             if (!$newUser) {
                 throw new \Exception("Failed to create Drive user for SSO id $uid");
             }
-
-            // call api send mail to user with sso account details
-            // put this in a thread
-            // $this->sendEmail($email, "Your SSO account has been created. Email: $email");
 
             return new DataResponse(['status' => 'success', 'message' => 'Drive account created. Please return to main page to login using your SSO credentials.'], 200);
         } catch (\Exception $e) {
@@ -243,11 +235,6 @@ class RegisterController extends Controller {
             $this->logger->error("SSO create account error: " . $e->getMessage());
             return null;
         }
-    }
-
-    private function sendEmail(string $toEmail, string $content): bool {
-        // implement email sending logic here
-        return true;
     }
 
     private function createDriveUserFromSSOId(string $ssoId, string $email = null): ?\OCP\IUser {
