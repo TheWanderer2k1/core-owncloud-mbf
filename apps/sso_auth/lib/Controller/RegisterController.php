@@ -258,7 +258,7 @@ class RegisterController extends Controller {
                     $newUser->setEmailAddress($email);
                     $newUser->setDisplayName($email);
                 }
-                $newUser->setQuota($this->config->getSystemValue('default_user_quota', '15 GB'));
+                $newUser->setQuota($this->config->getSystemValue('default_user_quota', '5 GB'));
                 $defaultGroup = \OC::$server->getGroupManager()->get('default'); // default group must exist first
                 $defaultGroup->addUser($newUser);
             }
