@@ -247,7 +247,9 @@ class RegisterController extends Controller {
                 $newUser = $existingUser;
             } else {
                 $randomPassword = \OC::$server->getSecureRandom()->generate(10); // generate random password here, user should login via SSO account only
-                $newUser = $this->userManager->createUser($ssoId, $randomPassword);
+                $userBackend = $this->userManager->getBackend('OCA\SsoAuth\UserBackend');
+                $userBackend->createUser($ssoId, $randomPassword);
+                $newUser = $this->userManager->createUserFromBackend($ssoId, $randomPassword, $userBackend);
                 $this->logger->debug("Created new Drive user with uid $ssoId");
                 if (!$newUser) {
                     throw new \Exception("Failed to create Drive user for SSO id $ssoId");
