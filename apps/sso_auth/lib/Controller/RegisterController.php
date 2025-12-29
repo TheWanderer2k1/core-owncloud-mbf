@@ -176,8 +176,7 @@ class RegisterController extends Controller {
     private function checkSSOAccount(string $email, string $phoneNumber): bool {
         try {
             $client = $this->http->newClient();
-            // $url = rtrim($this->ssoUrl, '/') . '/checkAccount';
-            $url = 'https://api-sso.1erp.vn/user/public/check-email-phone-none-exist';
+            $url = rtrim($this->ssoUrl, '/') . '/user/public/check-email-phone-none-exist';
             $response = $client->post($url, [
                 'body' => json_encode([
                     'username' => $email,

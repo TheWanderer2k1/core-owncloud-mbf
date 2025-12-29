@@ -68,6 +68,8 @@ class ConfigController extends Controller {
         $this->config->setAppValue('sso_auth', 'client_secret', $client_secret);
         $this->config->setAppValue('sso_auth', 'admin_user', $admin_user);
         $this->config->setAppValue('sso_auth', 'admin_password', $admin_password);
+        // default configuration
+        $this->config->setAppValue('sso_auth', 'types', 'authentication');
 
         return new DataResponse(['status' => 'success']);
     }
