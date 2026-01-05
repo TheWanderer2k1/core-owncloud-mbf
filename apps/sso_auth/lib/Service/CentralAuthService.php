@@ -7,7 +7,6 @@ use OCP\ILogger;
 use OCP\Http\Client\IClientService;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
-use OC\User\Account;
 
 class CentralAuthService {
 
