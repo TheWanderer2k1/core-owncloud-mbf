@@ -87,13 +87,13 @@ script('core', [
 			<?php if (!empty($_['invalidpassword']) && !empty($_['canResetPassword'])) {
 				?>
 				<a id="lost-password" class="warning" href="<?php p($_['resetPasswordLink']); ?>">
-					<?php p($l->t('Wrong password. Reset it?')); ?>
+					<?php p($l->t('Invalid email or password. Reset it?')); ?>
 				</a>
 				<?php
 			} elseif (!empty($_['invalidpassword'])) {
 				?>
 					<p class="warning">
-						<?php p($l->t('Wrong password.')); ?>
+						<?php p($l->t('Invalid email or password.')); ?>
 					</p>
 				<?php
 			} ?>

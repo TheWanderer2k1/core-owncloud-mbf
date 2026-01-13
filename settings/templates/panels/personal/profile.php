@@ -136,6 +136,13 @@ if ($_['passwordChangeSupported']) {
 	<input id="passwordbutton" type="submit" value="<?php echo $l->t('Change password'); ?>" />
 </form>
 <?php
+} elseif (\OC::$server->getUserManager()->getBackend('OCA\SsoAuth\UserBackend') !== null) {
+?>
+<div id="passwordform" class="section">
+	<h2><?php p($l->t('Password')); ?></h2>
+	<p><?php p($l->t('Password is managed by your Single Sign-On provider: ')); ?><a href="https://auth-sso.mobifone.vn/" target="_blank"><?php p($l->t('MobiFone SSO')); ?></a></p>
+</div>
+<?php
 }
 ?>
 <form id="language" class="section">

@@ -1,0 +1,76 @@
+<?php
+
+namespace OCA\SsoAuth\Controller;
+
+use OCP\AppFramework\Controller;
+use OCP\AppFramework\Http\DataResponse;
+use OCP\AppFramework\Http\TemplateResponse;
+use OCP\IRequest;
+use OCP\IConfig;
+
+class ConfigController extends Controller {
+
+    private $config;
+
+
+    public function __construct($appName, IRequest $request, IConfig $config) {
+        parent::__construct($appName, $request);
+        $this->config = $config;
+
+    }
+
+    /**
+     * @NoCSRFRequired
+     */
+    public function index() {
+        $templateName = 'admin';
+        $parameters = [
+            'sso_url' => $this->config->getAppValue('sso_auth', 'sso_url', ''),
+            'realm' => $this->config->getAppValue('sso_auth', 'realm', ''),
+            'client_id' => $this->config->getAppValue('sso_auth', 'client_id', ''),
+            'client_secret' => $this->config->getAppValue('sso_auth', 'client_secret', ''),
+            'admin_user' => $this->config->getAppValue('sso_auth', 'admin_user', ''),
+            'admin_password' => $this->config->getAppValue('sso_auth', 'admin_password', '')
+        ];
+        return new TemplateResponse($this->appName, $templateName, $parameters);
+    }
+
+    /**
+     * @AdminRequired
+     */
+    public function save(string $sso_url, string $realm, string $client_id, string $client_secret, string $admin_user, string $admin_password): DataResponse {
+        if (!filter_var($sso_url, FILTER_VALIDATE_URL)) {
+            return new DataResponse(['status' => 'error', 'message' => 'Sso url is invalid'], 400);
+        }
+        if (empty($realm)) {
+            return new DataResponse(['status' => 'error', 'message' => 'Realm is required'], 400);
+        }
+
+        if (empty($client_id)) {
+            return new DataResponse(['status' => 'error', 'message' => 'Client id is required'], 400);
+        }
+
+        if (empty($client_secret)) {
+            return new DataResponse(['status' => 'error', 'message' => 'Client secret is required'], 400);
+        }
+
+        if (empty($admin_user)) {
+            return new DataResponse(['status' => 'error', 'message' => 'Admin email is required'], 400);
+        }
+
+        if (empty($admin_password)) {
+            return new DataResponse(['status' => 'error', 'message' => 'Admin password is required'], 400);
+        }
+
+        $this->config->setAppValue('sso_auth', 'sso_url', $sso_url);
+        $this->config->setAppValue('sso_auth', 'realm', $realm);
+        $this->config->setAppValue('sso_auth', 'client_id', $client_id);
+        $this->config->setAppValue('sso_auth', 'client_secret', $client_secret);
+        $this->config->setAppValue('sso_auth', 'admin_user', $admin_user);
+        $this->config->setAppValue('sso_auth', 'admin_password', $admin_password);
+        // default configuration
+        $this->config->setAppValue('sso_auth', 'types', 'authentication');
+
+        return new DataResponse(['status' => 'success']);
+    }
+}
