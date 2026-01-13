@@ -52,7 +52,7 @@ class RegisterController extends Controller {
     /**
      * @PublicPage
      */
-    public function register(string $email, string $phoneNumber, string $password) {
+    public function register(string $email = null, string $phoneNumber = null, string $password = null) {
         try {
             // validate inputs
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -103,7 +103,7 @@ class RegisterController extends Controller {
     /**
      * @PublicPage
      */
-    public function login(string $ssoIdentifier, string $password) {
+    public function login(string $ssoIdentifier = null, string $password = null) {
         try {
             // validate inputs
             $phonePattern = '/^(?:\+84|0)(3|5|7|8|9)[0-9]{8}$/';
