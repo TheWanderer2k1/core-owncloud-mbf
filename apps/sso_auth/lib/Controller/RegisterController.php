@@ -144,6 +144,59 @@ class RegisterController extends Controller {
         }
     }
 
+    /**
+     * @PublicPage
+     * @NoCSRFRequired
+     */
+    public function registerSMS(string $phoneNumber = null, string $quota = null) {
+        try {
+            // validate input
+            $phonePattern = '/^(?:\+84|0)(3|5|7|8|9)[0-9]{8}$/';
+            if (empty($phoneNumber) || !preg_match($phonePattern, $phoneNumber)) {
+                return new DataResponse(['status' => 'error', 'message' => 'Invalid phone number'], 400);
+            }
+
+            // validate quota string here
+            $quotaPattern = '/^\d+\sGB$/';
+            if (empty($quota) || !preg_match($quotaPattern, $quota)) {
+                return new DataResponse(['status' => 'error', 'message' => 'Invalid quota format. Use format like "5 GB"'], 400);
+            }
+
+            // call api check SSO account
+            // if account exists, extract sso id from result
+            // else create account in SSO and Drive
+            $uid = $this->checkSSOAccount(null, $phoneNumber);
+            if (!$uid) {
+                $defaultPassword = 'MbfDrive@2026';
+                $uid = $this->createSSOAccount(null, $phoneNumber, $defaultPassword);
+                if (!$uid) {
+                    throw new \Exception("Failed to create SSO account");
+                }
+            }
+
+            // create OwnCloud user with sso id as uid
+            $newUser = $this->createDriveUserFromSSOId($uid);
+            if (!$newUser) {
+                throw new \Exception("Failed to create Drive user for SSO id $uid");
+            }
+
+            // ensure correct quota for this user
+            $newUser->setQuota($quota);
+
+            return new DataResponse([
+                'status' => 'success', 
+                'message' => 'SMS Registration successful.',
+                'account' => [
+                    'username' => $phoneNumber,
+                    'password' => isset($defaultPassword) ? $defaultPassword : null
+                ]
+            ], 200);
+        } catch (\Exception $e) {
+            $this->logger->error('Registration SMS error: ' . $e->getMessage());
+            return new DataResponse(['status' => 'error', 'message' => 'An error occurred during sms registration'], 500);
+        }
+    }
+
     private function getToken(string $username = null, string $password = null): ?string {
         try {
             $username = $username ?? $this->adminUser;
@@ -173,14 +226,14 @@ class RegisterController extends Controller {
         }
     }
 
-    private function checkSSOAccount(string $email, string $phoneNumber): bool {
+    private function checkSSOAccount(string $email = null, string $phoneNumber = null): ?string {
         try {
             $client = $this->http->newClient();
             $url = rtrim($this->ssoUrl, '/') . '/user/public/check-email-phone-none-exist';
             $response = $client->post($url, [
                 'body' => json_encode([
-                    'username' => $email,
-                    'phoneNumber' => $phoneNumber,
+                    'username' => $email ? $email : '',
+                    'phoneNumber' => $phoneNumber ? $phoneNumber : '',
                     'clientId' => $this->clientId,
                     'realmName' => $this->realmName
                 ]),
@@ -194,14 +247,19 @@ class RegisterController extends Controller {
                 $this->logger->debug("SSO check account response: " . $body);
                 throw new \Exception("There is no success field in response");
             }
-            return !(bool)$data["success"];
+            if (!(bool)$data["success"] && isset($data["result"]["ssoId"])) {
+                $this->logger->debug("SSO check account indicates existence: " . $data["result"]["ssoId"]);
+                return $data["result"]["ssoId"];
+            }
+            $this->logger->debug("SSO check account indicates non-existence: " . $body);
+            return null;
         } catch (\Throwable $e) {
             $this->logger->error("SSO check account error: " . $e->getMessage());
-            return false;
+            return null;
         }
     }
 
-    private function createSSOAccount(string $email, string $phoneNumber, string $password): ?string {
+    private function createSSOAccount(string $email = null, string $phoneNumber = null, string $password): ?string {
         try {
             $client = $this->http->newClient();
             $url = rtrim($this->ssoUrl, '/') . '/partner/create?clientId=' . urlencode($this->clientId);
@@ -209,15 +267,25 @@ class RegisterController extends Controller {
             if ($token === null) {
                 throw new \Exception("Unable to get admin token for SSO");
             }
+            $body = [
+                'password' => $password,
+                'loginType' => 0,
+                'loginTwoFactor' => 0,
+                'status' => 1,
+                'isAdmin' => false,
+                'tenantCode' => $this->clientId . "-TENANT",
+                'domain' => 'https://drive.mobifone.vn',
+            ];
+            if ($email !== null) {
+                $body['email'] = $email;
+                $body['registerType'] = 0;
+            }
+            if ($phoneNumber !== null) {
+                $body['phoneNumber'] = $phoneNumber;
+                $body['registerType'] = 1;
+            }
             $response = $client->post($url, [
-                'body' => json_encode([
-                    'email' => $email,
-                    'phoneNumber' => $phoneNumber,
-                    'password' => $password,
-                    'loginType' => 0,
-                    'loginTwoFactor' => 0,
-                    'status' => 1
-                ]),
+                'body' => json_encode($body),
                 'headers' => [
                     'Content-Type' => 'application/json',
                     'Authorization' => 'Bearer ' . $token
@@ -229,7 +297,26 @@ class RegisterController extends Controller {
                 $this->logger->debug("SSO create account response: " . $body);
                 throw new \Exception("Response indicates failure");
             }
-            return $data["result"]["userId"];
+
+            // add this user to drive tenant on sso side
+            // 200 means ok, else there will be exception
+            $ssoUserId = $data["result"]["userId"];
+            $url = rtrim($this->ssoUrl, '/') . '/partner/create-tenant?userId=' . urlencode($ssoUserId);
+            $body = [
+                'clientId' => $this->clientId,
+                'tenantCode' => $this->clientId . "-TENANT",
+                'domain' => 'https://drive.mobifone.vn',
+            ];
+            $response = $client->post($url, [
+                'body' => json_encode($body),
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                    'Authorization' => 'Bearer ' . $token
+                ]
+            ]);
+            $this->logger->debug("User $ssoUserId is in tenant " . $this->clientId . "-TENANT");
+
+            return $ssoUserId;
         } catch (\Throwable $e) {
             $this->logger->error("SSO create account error: " . $e->getMessage());
             return null;
