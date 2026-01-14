@@ -46,7 +46,7 @@ class RegisterController extends Controller {
      * @PublicPage
      */
     public function index() {
-        return new TemplateResponse($this->appName, 'register');
+        return new TemplateResponse($this->appName, 'register', [], 'guest');
     }
 
     /**
