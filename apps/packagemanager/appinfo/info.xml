@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<info>
+	<id>packagemanager</id>
+	<name>Package Manager</name>
+	<summary>Package Manager App For ownCloud</summary>
+	<version>1.0.0</version>
+	<description>Package management from the CBS system</description>
+	<licence>AGPL</licence>
+	<author>MobiFone IT</author>
+	<namespace>PackageManager</namespace>
+	<category>packagemanager</category>
+
+	<dependencies>
+		<owncloud min-version="10" max-version="10.99" />
+	</dependencies>
+
+
+</info>

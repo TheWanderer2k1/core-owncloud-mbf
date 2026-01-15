@@ -38,14 +38,6 @@ class UserBackend extends Database {
             }
             $userUid = $this->centralAuthService->loginWithEmailPassword($loginName, $password);
             if ($userUid) {
-                try {
-                    $db = \OC::$server->getDatabaseConnection();
-                    $qb = $db->getQueryBuilder();
-                    $qb->update('accounts')
-                       ->set('backend', $qb->createNamedParameter(get_class($this)))
-                       ->where($qb->expr()->eq('lower_user_id', $qb->createNamedParameter(strtolower($userUid))));
-                    $qb->execute();
-                } catch (\Throwable $e) {}
                 return $userUid;
             }
             return false;

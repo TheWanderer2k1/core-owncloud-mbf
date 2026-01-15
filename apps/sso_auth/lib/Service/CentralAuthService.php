@@ -55,11 +55,14 @@ class CentralAuthService {
             $body = (string) $response->getBody();
             $data = json_decode($body, true);
             if (!isset($data['access_token'])) return null;
-            /* Check if user exists in OwnCloud */
-            $user = $this->userManager->getByEmail($email);
-            if ($user !== null && count($user) > 0) {
-                $uid = $user[0]->getUID();
-                return $uid;
+            $token = $data['access_token'];
+            $decoded = (array) JWT::jsonDecode(JWT::urlsafeB64Decode(explode('.', $token)[1]));
+            $uid = $decoded['sub'] ?? null;
+            if ($uid !== null) {
+                $user = $this->userManager->get($uid);
+                if ($user !== null && $user->isEnabled()) {
+                    return $uid;
+                }
             }
             return null;
         } catch (\Throwable $e) {
