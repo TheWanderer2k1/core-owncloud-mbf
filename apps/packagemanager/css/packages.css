@@ -1,0 +1,167 @@
+/**
+ * Package Manager Styles
+ */
+
+#app-content-wrapper {
+  padding: 20px;
+}
+
+#controls {
+  margin-bottom: 20px;
+  padding: 10px;
+  background-color: #f8f8f8;
+  border-radius: 3px;
+}
+
+.button.new {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 15px;
+  background-color: #0082c9;
+  color: white;
+  border-radius: 3px;
+  text-decoration: none;
+}
+
+.button.new:hover {
+  background-color: #006aa3;
+}
+
+#new-package-form {
+  background-color: #f8f8f8;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 3px;
+  border: 1px solid #ddd;
+}
+
+#new-package-form h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 18px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  max-width: 400px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+}
+
+.form-actions {
+  margin-top: 20px;
+}
+
+.form-actions button {
+  margin-right: 10px;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.form-actions button.primary {
+  background-color: #0082c9;
+  color: white;
+}
+
+.form-actions button.primary:hover {
+  background-color: #006aa3;
+}
+
+.form-actions button.cancel {
+  background-color: #ddd;
+  color: #333;
+}
+
+.form-actions button.cancel:hover {
+  background-color: #ccc;
+}
+
+#packages-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+}
+
+#packages-table thead {
+  background-color: #f8f8f8;
+  border-bottom: 2px solid #ddd;
+}
+
+#packages-table th {
+  padding: 12px;
+  text-align: left;
+  font-weight: bold;
+}
+
+#packages-table td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+#packages-table tbody tr:hover {
+  background-color: #f8f8f8;
+}
+
+#packages-table .actions {
+  white-space: nowrap;
+}
+
+#packages-table .actions a {
+  margin-right: 10px;
+  color: #0082c9;
+  text-decoration: none;
+}
+
+#packages-table .actions a:hover {
+  color: #006aa3;
+}
+
+#packages-table .actions .icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+}
+
+#packages-table input,
+#packages-table select {
+  width: 100%;
+  padding: 5px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+}
+
+.loading td,
+.no-packages {
+  text-align: center;
+  padding: 40px !important;
+  color: #999;
+  font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  #packages-table {
+    font-size: 14px;
+  }
+
+  #packages-table th,
+  #packages-table td {
+    padding: 8px;
+  }
+}
