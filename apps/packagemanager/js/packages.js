@@ -16,28 +16,38 @@
     bindEvents: function () {
       var self = this;
 
-      // Show/hide new package form
-      $(".button.new").on("click", function (e) {
+      // Show new package modal
+      $("button.new-package").on("click", function (e) {
         e.preventDefault();
-        $("#new-package-form").slideToggle();
+        self.showCreateModal();
       });
 
-      // Cancel button
-      $(".button.cancel").on("click", function (e) {
-        e.preventDefault();
-        $("#new-package-form").slideUp();
-        $("#package-form")[0].reset();
+      // Select all checkbox
+      $("#select_all_packages").on("change", function () {
+        var checked = $(this).prop("checked");
+        $("#fileList .checkbox").prop("checked", checked);
+        $("#fileList tr[data-id]").toggleClass("selected", checked);
+        self.updateSelectionSummary();
       });
 
-      // Submit form
-      $("#package-form").on("submit", function (e) {
-        e.preventDefault();
-        self.createPackage();
+      // Individual row checkbox
+      $(document).on("change", "#fileList .checkbox", function () {
+        var $row = $(this).closest("tr");
+        $row.toggleClass("selected", $(this).prop("checked"));
+        self.updateSelectionSummary();
+      });
+
+      // Row click to select (like Files app)
+      $(document).on("click", "#fileList tr[data-id]", function (e) {
+        if ($(e.target).is("input, a, .icon")) return;
+        var $checkbox = $(this).find(".checkbox");
+        $checkbox.prop("checked", !$checkbox.prop("checked")).trigger("change");
       });
 
       // Delete package
       $(document).on("click", ".delete-package", function (e) {
         e.preventDefault();
+        e.stopPropagation();
         var id = $(this).data("id");
         var name = $(this).data("name");
 
@@ -48,9 +58,31 @@
         }
       });
 
-      // Edit package (inline editing)
+      // Delete selected
+      $(document).on("click", ".delete-selected", function (e) {
+        e.preventDefault();
+        var selectedIds = [];
+        $("#fileList tr.selected").each(function () {
+          selectedIds.push($(this).data("id"));
+        });
+
+        if (selectedIds.length > 0) {
+          if (
+            confirm(
+              "Are you sure you want to delete " +
+                selectedIds.length +
+                " packages?"
+            )
+          ) {
+            self.deleteMultiplePackages(selectedIds);
+          }
+        }
+      });
+
+      // Edit package
       $(document).on("click", ".edit-package", function (e) {
         e.preventDefault();
+        e.stopPropagation();
         var $row = $(this).closest("tr");
         self.makeRowEditable($row);
       });
@@ -58,6 +90,7 @@
       // Save edited package
       $(document).on("click", ".save-package", function (e) {
         e.preventDefault();
+        e.stopPropagation();
         var $row = $(this).closest("tr");
         self.savePackage($row);
       });
@@ -65,13 +98,45 @@
       // Cancel edit
       $(document).on("click", ".cancel-edit", function (e) {
         e.preventDefault();
+        e.stopPropagation();
         self.loadPackages();
+      });
+    },
+
+    showCreateModal: function () {
+      var self = this;
+      var template = $("#package-form-template").html();
+      var $dialog = $(template);
+
+      $("body").append($dialog);
+
+      $dialog.ocdialog({
+        closeOnEscape: true,
+        modal: true,
+        buttons: [
+          {
+            text: t("packagemanager", "Cancel"),
+            click: function () {
+              $(this).ocdialog("close");
+            },
+          },
+          {
+            text: t("packagemanager", "Save"),
+            classes: "primary",
+            click: function () {
+              self.createPackageFromModal($(this));
+            },
+            defaultButton: true,
+          },
+        ],
+        close: function () {
+          $(this).ocdialog("destroy").remove();
+        },
       });
     },
 
     loadPackages: function () {
       var self = this;
-
       $.ajax({
         url: this.baseUrl,
         method: "GET",
@@ -91,50 +156,120 @@
     },
 
     renderPackages: function (packages) {
-      var $tbody = $("#packages-list");
-      $tbody.empty();
+      var $tbody = $("#fileList");
+      $tbody.find("tr[data-id]").remove();
+      $tbody.find(".no-packages, .loading").remove();
 
       if (packages.length === 0) {
         $tbody.append(
-          '<tr><td colspan="6" class="no-packages">No packages found. Create your first package!</td></tr>'
+          '<tr class="no-packages"><td colspan="6" style="text-align: center; padding: 40px; color: #999;">No packages found. Create your first package!</td></tr>'
         );
         return;
       }
 
       packages.forEach(function (pkg) {
         var $row = $('<tr data-id="' + pkg.id + '">');
-        $row.append('<td class="name">' + escapeHtml(pkg.name) + "</td>");
-        $row.append('<td class="code">' + escapeHtml(pkg.code) + "</td>");
-        $row.append(
-          '<td class="price">' + parseFloat(pkg.price).toFixed(2) + "</td>"
+        var $nameCol = $('<td class="column-name">');
+        var $nameContainer = $('<div class="nametext">');
+        $nameContainer.append('<input type="checkbox" class="checkbox"> ');
+        $nameContainer.append(
+          '<span class="innernametext">' + escapeHtml(pkg.name) + "</span>"
         );
-        $row.append('<td class="duration">' + pkg.duration + "</td>");
-        $row.append('<td class="unit">' + escapeHtml(pkg.unit) + "</td>");
-        $row.append(
-          '<td class="actions">' +
-            '<a href="#" class="edit-package" data-id="' +
+
+        var $actions = $('<div class="fileactions">');
+        $actions.append(
+          '<a href="#" class="edit-package" data-id="' +
             pkg.id +
-            '" title="Edit"><span class="icon icon-rename"></span></a> ' +
-            '<a href="#" class="delete-package" data-id="' +
+            '" title="Edit"><span class="icon icon-rename"></span></a>'
+        );
+        $actions.append(
+          '<a href="#" class="delete-package" data-id="' +
             pkg.id +
             '" data-name="' +
             escapeHtml(pkg.name) +
-            '" title="Delete"><span class="icon icon-delete"></span></a>' +
+            '" title="Delete"><span class="icon icon-delete"></span></a>'
+        );
+
+        $nameCol.append($nameContainer);
+
+        $row.append($nameCol);
+        $row.append(
+          '<td class="column-code">' + escapeHtml(pkg.code) + "</td>"
+        );
+        $row.append(
+          '<td class="column-price">' +
+            parseFloat(pkg.price).toFixed(2) +
             "</td>"
         );
+        $row.append('<td class="column-duration">' + pkg.duration + "</td>");
+        $row.append(
+          '<td class="column-unit">' + escapeHtml(pkg.unit) + "</td>"
+        );
+
+        var $actionsCol = $('<td class="column-actions">');
+        $actionsCol.append($actions);
+        $row.append($actionsCol);
+
         $tbody.append($row);
       });
+
+      this.updateSelectionSummary();
     },
 
-    createPackage: function () {
+    updateSelectionSummary: function () {
+      var $selectedRows = $("#fileList tr.selected");
+      var count = $selectedRows.length;
+      var total = $("#fileList tr[data-id]").length;
+      var $headerName = $("#headerName .name span:first-child");
+      var $selectedActions = $(".selectedActions");
+      var $filestable = $("#filestable");
+
+      if (count > 0) {
+        $headerName.text(count + " packages selected");
+        $selectedActions.removeClass("hidden");
+        $filestable.addClass("multiselect");
+        $("#modified span:first-child").text("");
+      } else {
+        $headerName.text("Package name");
+        $selectedActions.addClass("hidden");
+        $filestable.removeClass("multiselect");
+        $("#modified span:first-child").text("Unit");
+      }
+
+      var $summary = $(".summary .info");
+      $summary.text(total + " Packages");
+    },
+
+    createPackageFromModal: function ($dialog) {
       var self = this;
+      var $form = $dialog.find("#modal-package-form");
       var formData = {
-        name: $("#package-name").val(),
-        code: $("#package-code").val(),
-        price: $("#package-price").val(),
-        duration: $("#package-duration").val(),
-        unit: $("#package-unit").val(),
+        name: $form.find('input[name="name"]').val(),
+        code: $form.find('input[name="code"]').val(),
+        price: $form.find('input[name="price"]').val(),
+        duration: $form.find('input[name="duration"]').val(),
+        unit: $form.find('select[name="unit"]').val(),
       };
+
+      if (!formData.name) {
+        OC.Notification.showTemporary("Package name are required !");
+        return;
+      }
+
+      if (!formData.code) {
+        OC.Notification.showTemporary("Package code are required !");
+        return;
+      }
+
+      if (!formData.price) {
+        OC.Notification.showTemporary("Price are required !");
+        return;
+      }
+
+      if (!formData.duration) {
+        OC.Notification.showTemporary("Duration are required !");
+        return;
+      }
 
       $.ajax({
         url: this.baseUrl,
@@ -143,65 +278,71 @@
         success: function (response) {
           if (response.status === "success") {
             OC.Notification.showTemporary("Package created successfully");
-            $("#package-form")[0].reset();
-            $("#new-package-form").slideUp();
+            $dialog.ocdialog("close");
             self.loadPackages();
           } else {
             OC.Notification.showTemporary("Error: " + response.message);
           }
         },
         error: function () {
-          OC.Notification.showTemporary("Error creating package");
+          OC.Notification.showTemporary("Package code already existed !");
         },
       });
     },
 
     makeRowEditable: function ($row) {
-      var id = $row.data("id");
-      var name = $row.find(".name").text();
-      var code = $row.find(".code").text();
-      var price = $row.find(".price").text();
-      var duration = $row.find(".duration").text();
-      var unit = $row.find(".unit").text();
+      var name = $row.find(".innernametext").text();
+      var code = $row.find(".column-code").text();
+      var price = $row.find(".column-price").text();
+      var duration = $row.find(".column-duration").text();
+      var unit = $row.find(".column-unit").text();
 
-      $row.html(
-        '<td><input type="text" class="edit-name" value="' +
-          escapeHtml(name) +
-          '"></td>' +
-          '<td><input type="text" class="edit-code" value="' +
-          escapeHtml(code) +
-          '"></td>' +
-          '<td><input type="number" class="edit-price" step="0.01" value="' +
-          price +
-          '"></td>' +
-          '<td><input type="number" class="edit-duration" value="' +
-          duration +
-          '"></td>' +
-          "<td>" +
-          '<select class="edit-unit">' +
-          '<option value="day"' +
-          (unit === "day" ? " selected" : "") +
-          ">Day</option>" +
-          '<option value="month"' +
-          (unit === "month" ? " selected" : "") +
-          ">Month</option>" +
-          '<option value="year"' +
-          (unit === "year" ? " selected" : "") +
-          ">Year</option>" +
-          "</select>" +
-          "</td>" +
-          '<td class="actions">' +
-          '<a href="#" class="save-package" title="Save"><span class="icon icon-checkmark"></span></a> ' +
-          '<a href="#" class="cancel-edit" title="Cancel"><span class="icon icon-close"></span></a>' +
-          "</td>"
-      );
+      $row
+        .addClass("editing")
+        .html(
+          '<td class="column-name">' +
+            '<div class="nametext">' +
+            '<input type="text" class="filename edit-name" value="' +
+            escapeHtml(name) +
+            '">' +
+            "</div>" +
+            "</td>" +
+            '<td class="column-code"><input type="text" class="edit-code" value="' +
+            escapeHtml(code) +
+            '"></td>' +
+            '<td class="column-price"><input type="number" step="0.01" class="edit-price" value="' +
+            price +
+            '"></td>' +
+            '<td class="column-duration"><input type="number" class="edit-duration" value="' +
+            duration +
+            '"></td>' +
+            '<td class="column-unit">' +
+            '<select class="edit-unit">' +
+            '<option value="day"' +
+            (unit === "day" ? " selected" : "") +
+            ">Day</option>" +
+            '<option value="month"' +
+            (unit === "month" ? " selected" : "") +
+            ">Month</option>" +
+            '<option value="year"' +
+            (unit === "year" ? " selected" : "") +
+            ">Year</option>" +
+            "</select>" +
+            "</td>" +
+            '<td class="column-actions">' +
+            '<div class="fileactions visible" style="display: flex;">' +
+            '<a href="#" class="save-package" title="Save"><span class="icon icon-checkmark"></span></a> ' +
+            '<a href="#" class="cancel-edit" title="Cancel"><span class="icon icon-close"></span></a>' +
+            "</div>" +
+            "</td>"
+        );
+      $row.find(".edit-name").focus();
     },
 
     savePackage: function ($row) {
       var self = this;
       var id = $row.data("id");
       var formData = {
-        id: id,
         name: $row.find(".edit-name").val(),
         code: $row.find(".edit-code").val(),
         price: $row.find(".edit-price").val(),
@@ -229,7 +370,6 @@
 
     deletePackage: function (id) {
       var self = this;
-
       $.ajax({
         url: this.baseUrl + "/" + id,
         method: "DELETE",
@@ -245,6 +385,27 @@
           OC.Notification.showTemporary("Error deleting package");
         },
       });
+    },
+
+    deleteMultiplePackages: function (ids) {
+      var self = this;
+      var promises = ids.map(function (id) {
+        return $.ajax({
+          url: self.baseUrl + "/" + id,
+          method: "DELETE",
+        });
+      });
+
+      $.when.apply($, promises).then(
+        function () {
+          OC.Notification.showTemporary("Packages deleted successfully");
+          self.loadPackages();
+        },
+        function () {
+          OC.Notification.showTemporary("Some packages could not be deleted");
+          self.loadPackages();
+        }
+      );
     },
   };
 
