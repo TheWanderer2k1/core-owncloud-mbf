@@ -27,5 +27,10 @@ return [
             'url'  => '/register/create',
             'verb' => 'POST'
         ],
+        [
+            'name' => 'register#registerSMS',
+            'url'  => '/internal/register/sms',
+            'verb' => 'POST'
+        ],
     ]
 ];
