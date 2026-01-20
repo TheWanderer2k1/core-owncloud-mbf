@@ -201,6 +201,7 @@
             parseFloat(pkg.price).toFixed(2) +
             "</td>"
         );
+        $row.append('<td class="column-quota">' + escapeHtml(pkg.quota) + "</td>");
         $row.append('<td class="column-duration">' + pkg.duration + "</td>");
         $row.append(
           '<td class="column-unit">' + escapeHtml(pkg.unit) + "</td>"
@@ -247,6 +248,7 @@
         name: $form.find('input[name="name"]').val(),
         code: $form.find('input[name="code"]').val(),
         price: $form.find('input[name="price"]').val(),
+        quota: $form.find('input[name="quota"]').val(),
         duration: $form.find('input[name="duration"]').val(),
         unit: $form.find('select[name="unit"]').val(),
       };
@@ -263,6 +265,11 @@
 
       if (!formData.price) {
         OC.Notification.showTemporary("Price are required !");
+        return;
+      }
+
+      if (!formData.quota) {
+        OC.Notification.showTemporary("Quota are required !");
         return;
       }
 
@@ -294,6 +301,7 @@
       var name = $row.find(".innernametext").text();
       var code = $row.find(".column-code").text();
       var price = $row.find(".column-price").text();
+      var quota = $row.find(".column-quota").text();
       var duration = $row.find(".column-duration").text();
       var unit = $row.find(".column-unit").text();
 
@@ -312,6 +320,9 @@
             '"></td>' +
             '<td class="column-price"><input type="number" step="0.01" class="edit-price" value="' +
             price +
+            '"></td>' +
+            '<td class="column-quota"><input type="text" class="edit-quota" value="' +
+            escapeHtml(quota) +
             '"></td>' +
             '<td class="column-duration"><input type="number" class="edit-duration" value="' +
             duration +
@@ -346,6 +357,7 @@
         name: $row.find(".edit-name").val(),
         code: $row.find(".edit-code").val(),
         price: $row.find(".edit-price").val(),
+        quota: $row.find(".edit-quota").val(),
         duration: $row.find(".edit-duration").val(),
         unit: $row.find(".edit-unit").val(),
       };
