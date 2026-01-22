@@ -73,7 +73,9 @@ class RegisterController extends Controller {
             // if account exists, redirect user to login page with message
             // else create account in SSO and Drive
             $exists = $this->checkSSOAccount($email, $phoneNumber);
+            $this->logger->error("SSO account already exists for email: $email, phone: $phoneNumber, exists: $exists");
             if ($exists) {
+                // $this->logger->error("SSO account already exists for email: $email, phone: $phoneNumber, exists: $exists");
                 $parameters = [
                     'email' => $email,
                     'phoneNumber' => $phoneNumber
