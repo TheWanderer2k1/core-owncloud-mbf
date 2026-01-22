@@ -1,0 +1,280 @@
+/**
+ * Package Manager Styles - Files App Look & Feel
+ */
+
+#app-content {
+  background-color: #fff;
+  overflow-x: hidden;
+}
+
+#controls {
+  border-bottom: 1px solid #eee;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  justify-content: space-between;
+  padding: 35px 0;
+}
+
+#controls .actions {
+  margin-right: 10px;
+}
+
+#controls .actions.creatable{
+  display: flex;
+  justify-content: space-between;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumb .crumb {
+  display: flex;
+  align-items: center;
+  color: #333;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.breadcrumb .crumb:after {
+  content: ">";
+  margin: 0 10px;
+  color: #ccc;
+  font-weight: normal;
+}
+
+.breadcrumb .crumb:last-child:after {
+  display: none;
+}
+
+.selectedActions .icon-delete:hover{
+  background-image: url(../img/delete.svg);
+}
+
+
+.icon {
+  display: inline-block;
+  vertical-align: middle;
+  background-size: cover;
+}
+
+/* FileTable Styling */
+#filestable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#filestable thead th {
+  padding: 0;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+  color: #999;
+  font-weight: normal;
+  background-color: #fff;
+  height: 50px;
+}
+
+#headerName-container {
+  position: relative;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  padding-left: 15px;
+}
+
+.columntitle {
+  display: block;
+  padding: 15px;
+  height: 50px;
+  box-sizing: border-box;
+  text-decoration: none;
+  color: #999;
+}
+
+.column-name .columntitle {
+  padding-left: 5px;
+}
+
+/* Multiselect header */
+table.multiselect thead th {
+  background-color: rgba(255, 255, 255, 0.95);
+  color: #000;
+  font-weight: bold;
+}
+
+.selectedActions {
+  display: flex;
+  align-items: center;
+}
+
+.selectedActions.hidden {
+  display: none !important;
+}
+
+.selectedActions .button {
+  margin-left: 10px;
+}
+
+#filestable tbody tr {
+  height: 50px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  background-color: #fff;
+}
+
+#filestable tbody tr:hover {
+  background-color: #f8f8f8;
+}
+
+#filestable tbody tr.selected {
+  background-color: #f8f8f8;
+}
+
+#filestable td {
+  padding: 0 15px;
+  vertical-align: middle;
+}
+
+#filestable td.column-name {
+  position: relative;
+}
+
+.nametext {
+  padding: 15px 0;
+  display: flex;
+  align-items: center;
+}
+
+.nametext .icon {
+  margin-right: 15px;
+  width: 32px;
+  height: 32px;
+}
+
+.innernametext {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.fileactions {
+  opacity: 0;
+  margin-left: auto;
+  display: flex;
+}
+
+#filestable tbody tr:hover .fileactions {
+  opacity: 1;
+}
+
+.fileactions a {
+  padding: 17px 8px;
+  color: #999;
+  line-height: 50px;
+}
+
+.fileactions a:hover {
+  color: #333;
+}
+
+/* Inline Form Row */
+.editing td {
+  background-color: #f8f8f8;
+}
+
+.editing input,
+.editing select {
+  padding: 5px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  width: 90%;
+}
+
+.editing .filename {
+  width: 100%;
+}
+
+/* Modal Form Styling */
+.oc-dialog-content {
+  padding: 20px !important;
+}
+
+.package-form .form-group {
+  margin-bottom: 15px;
+}
+
+.package-form .form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #555;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.package-form .form-group input,
+.package-form .form-group select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  box-sizing: border-box;
+  font-size: 14px;
+  height: 40px;
+}
+
+.package-form .form-group input:focus,
+.package-form .form-group select:focus {
+  border-color: #0082c9;
+  outline: none;
+}
+
+/* Sidebar Styling */
+#app-navigation li.active {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+#app-navigation li a {
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  color: #333;
+  text-decoration: none;
+}
+
+#app-navigation li a .icon {
+  margin-right: 15px;
+}
+
+/* Package List Specifics */
+.column-code,
+.column-price,
+.column-duration,
+.column-unit {
+  color: #777;
+}
+
+.column-actions {
+  text-align: right;
+  width: 100px;
+}
+
+.column-unit {
+  position: relative;
+}
+
+#filestable .checkbox {
+  margin-right: 10px;
+  position: unset;
+  overflow: unset;
+  width: unset;
+  height: unset;
+}
+
+/* Hidden elements */
+.hidden {
+  display: none !important;
+}
