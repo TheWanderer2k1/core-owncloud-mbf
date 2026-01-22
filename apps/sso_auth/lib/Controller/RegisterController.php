@@ -46,7 +46,7 @@ class RegisterController extends Controller {
      * @PublicPage
      */
     public function index() {
-        return new TemplateResponse($this->appName, 'register');
+        return new TemplateResponse($this->appName, 'register', [], 'guest');
     }
 
     /**
@@ -348,7 +348,11 @@ class RegisterController extends Controller {
                 }
                 $newUser->setQuota($this->config->getSystemValue('default_user_quota', '5 GB'));
                 $defaultGroup = \OC::$server->getGroupManager()->get('default'); // default group must exist first
-                $defaultGroup->addUser($newUser);
+                if ($defaultGroup) {
+                    $defaultGroup->addUser($newUser);
+                } else {
+                    $this->logger->error('Default group does not exist. User created but not added to any group.');
+                }
             }
             return $newUser;
         } catch (\Exception $e) {

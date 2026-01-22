@@ -10,6 +10,7 @@ script('core', [
 ?>	
 
 <!--[if IE 8]><style>input[type="checkbox"]{padding:0;}</style><![endif]-->
+
 <form method="post" name="login" autocapitalize="none">
 <?php if (!empty($_['accessLink'])) {
 	?>
@@ -136,6 +137,17 @@ script('core', [
 		<input type="hidden" name="timezone-offset" id="timezone-offset"/>
 		<input type="hidden" name="timezone" id="timezone"/>
 		<input type="hidden" name="requesttoken" value="<?php p($_['requesttoken']) ?>">
+
+		<!-- Register Link -->
+		<div class="register-link-container">
+			<p style="color: #fff; margin-top: 20px; text-align: center;">
+				<?php p($l->t('Chưa có tài khoản?')); ?>
+				<a href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('sso_auth.register.index')); ?>"
+				   style="color: #fff; text-decoration: underline; font-weight: bold;">
+					<?php p($l->t('Đăng ký ngay')); ?>
+				</a>
+			</p>
+		</div>
 
 </form>
 <?php if (!empty($_['alt_login'])) {
