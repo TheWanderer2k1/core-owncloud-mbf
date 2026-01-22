@@ -7,11 +7,11 @@ use OCP\AppFramework\Db\Entity;
 class SubscriptionStatus extends Entity {
     protected string $userId;
     protected int $packageId;
-    protected string $startAt;
-    protected string $endAt;
+    protected int $startAt;
+    protected int $endAt;
     protected string $status;
 
-    public function __construct(string $userId = '', int $packageId = 0, string $startAt = '', string $endAt = '', string $status = '') {
+    public function __construct(string $userId = '', int $packageId = 0, int $startAt = 0, int $endAt = 0, string $status = '') {
         parent::__construct();
         $this->userId = $userId;
         $this->packageId = $packageId;
@@ -40,7 +40,7 @@ class SubscriptionStatus extends Entity {
         return $this->getter('startAt');
     }
 
-    public function setStartAt(string $startAt) {
+    public function setStartAt(int $startAt) {
         $this->setter('startAt', [$startAt]);
     }
 
@@ -48,7 +48,7 @@ class SubscriptionStatus extends Entity {
         return $this->getter('endAt');
     }
 
-    public function setEndAt(string $endAt) {
+    public function setEndAt(int $endAt) {
         $this->setter('endAt', [$endAt]);
     }
 
