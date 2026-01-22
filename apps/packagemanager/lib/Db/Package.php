@@ -21,6 +21,13 @@ class Package extends Entity {
         $this->quota = $quota;
         $this->duration = $duration;
         $this->unit = $unit;
+        // mark field update else cannot insert into DB
+        $this->markFieldUpdated('name');
+        $this->markFieldUpdated('code');
+        $this->markFieldUpdated('price');
+        $this->markFieldUpdated('quota');
+        $this->markFieldUpdated('duration');
+        $this->markFieldUpdated('unit');
     }
 
     public function getName() {

@@ -10,16 +10,23 @@ class SubscriptionHistory extends Entity {
     protected int $packageId;
     protected string $actionType;
     protected string $description;
-    protected \DateTime $createdAt;
+    protected string $createdAt;
 
-    public function __construct(int $subscriptionStatusId = 0, string $userId = '', int $packageId = 0, string $actionType = '', string $description = '', \DateTime $createdAt = null) {
+    public function __construct(int $subscriptionStatusId = 0, string $userId = '', int $packageId = 0, string $actionType = '', string $description = '', string $createdAt = null) {
         parent::__construct();
         $this->subscriptionStatusId = $subscriptionStatusId;
         $this->userId = $userId;
         $this->packageId = $packageId;
         $this->actionType = $actionType;
         $this->description = $description;
-        $this->createdAt = $createdAt ?? new \DateTime();
+        $this->createdAt = $createdAt ?? (new \DateTime())->format('Y-m-d H:i:s');
+        // mark field update else cannot insert into DB
+        $this->markFieldUpdated('subscriptionStatusId');
+        $this->markFieldUpdated('userId');
+        $this->markFieldUpdated('packageId');
+        $this->markFieldUpdated('actionType');
+        $this->markFieldUpdated('description');
+        $this->markFieldUpdated('createdAt');
     }
 
     public function getSubscriptionStatusId() {
@@ -66,7 +73,7 @@ class SubscriptionHistory extends Entity {
         return $this->getter('createdAt');
     }
 
-    public function setCreatedAt(\DateTime $createdAt) {
+    public function setCreatedAt(string $createdAt) {
         $this->setter('createdAt', [$createdAt]);
     }
 }

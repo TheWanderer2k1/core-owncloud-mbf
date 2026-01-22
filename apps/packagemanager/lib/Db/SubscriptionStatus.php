@@ -18,6 +18,12 @@ class SubscriptionStatus extends Entity {
         $this->startAt = $startAt;
         $this->endAt = $endAt;
         $this->status = $status;
+        // mark field update else cannot insert into DB
+        $this->markFieldUpdated('userId');
+        $this->markFieldUpdated('packageId');
+        $this->markFieldUpdated('startAt');
+        $this->markFieldUpdated('endAt');
+        $this->markFieldUpdated('status');
     }
 
     public function getUserId() {
