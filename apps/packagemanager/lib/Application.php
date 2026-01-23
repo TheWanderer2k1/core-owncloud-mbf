@@ -38,7 +38,6 @@ class Application extends App {
 				$c->query('AppName'),
 				$c->query('Request'),
 				$c->query('ServerContainer')->getConfig(),
-				$c->query('ServerContainer')->getHTTPClientService(),
 				$c->query('ServerContainer')->getUserManager(),
 				$c->query('PackageMapper'),
 				$c->query('SubscriptionStatusMapper'),
