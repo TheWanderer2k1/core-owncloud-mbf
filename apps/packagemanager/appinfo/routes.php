@@ -16,6 +16,5 @@ return [
 
 		// API package registration
 		['name' => 'package_registration#register', 'url' => '/api/internal/register', 'verb' => 'POST'],
-		['name' => 'package_registration#cancel', 'url' => '/api/internal/cancel', 'verb' => 'POST'],
 	]
 ];
