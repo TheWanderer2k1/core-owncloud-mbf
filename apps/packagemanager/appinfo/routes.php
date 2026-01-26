@@ -5,6 +5,10 @@
 
 return [
 	'routes' => [
+		// Config routes
+		['name' => 'config#index', 'url'  => '/config', 'verb' => 'GET'],
+        ['name' => 'config#save', 'url'  => '/config/save', 'verb' => 'POST'],
+
 		// Page routes
 		['name' => 'page#index', 'url' => '/', 'verb' => 'GET'],
 		
