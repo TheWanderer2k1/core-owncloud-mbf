@@ -35,6 +35,7 @@ class PackageRegistrationController extends Controller {
     private string $cbsAdminPass;
     private string $cbsApiBaseUrl;
     private string $cbsProductCode;
+    private string $cbsHashSecretKey;
 
 
     public function __construct($appName, IRequest $request, IConfig $config, IClientService $http, IUserManager $userManager, 
@@ -53,16 +54,27 @@ class PackageRegistrationController extends Controller {
         $this->cbsAdminPass = $this->config->getAppValue($appName, 'cbs_admin_pass', '');
         $this->cbsApiBaseUrl = $this->config->getAppValue($appName, 'cbs_api_base_url', '');
         $this->cbsProductCode = $this->config->getAppValue($appName, 'cbs_product_code', '');
+        $this->cbsHashSecretKey = $this->config->getAppValue($appName, 'cbs_hash_secret_key', '');
     }
 
     /**
      * @PublicPage
      * @NoCSRFRequired
      */
-    public function register(int $type, string $timeStamp, string $customerId, string $customerName, 
-                            string $ssoId, string $packageCode, string $token, array $listPackage, 
-                            string $ssoCustomerId, string $tenantCode, string $contractNo): DataResponse {
+    public function register(int $type = 0, string $timeStamp = '', string $customerId = '', string $customerName = '', 
+                            string $token = '', array $listPackage = [], string $ssoCustomerId = '', 
+                            string $tenantCode = '', string $contractNo = ''): DataResponse {
         try {
+            // validate input
+            if (empty($type) || empty($timeStamp) || empty($customerId) || empty($customerName) ||
+            empty($token) || empty($listPackage) || empty($ssoCustomerId) || empty($tenantCode) ||
+            empty($contractNo)) {
+                return new DataResponse([
+                    'status' => 2,
+                    'message' => 'Invalid input'
+                ], 400);
+            }
+
             // validate token
             if (!$this->validateToken($timeStamp, $customerId, $customerName, $token)) {
                 return new DataResponse([
@@ -98,7 +110,6 @@ class PackageRegistrationController extends Controller {
                 $packageCode = $packageInfo['packageCode'];
                 if ($packageInfo['action'] == 1) {
                     // register
-                    //validate input
                     if (empty($ssoId)) {
                         return new DataResponse([
                             'status' => 2, 
@@ -198,7 +209,17 @@ class PackageRegistrationController extends Controller {
                 } elseif ($packageInfo['action'] == 3) {
                     // cancel
                     return $this->cancel($ssoId, $packageCode);
+                } else {
+                    return new DataResponse([
+                        'status' => 2, 
+                        'message' => 'Only accept action 1 (register) or 3 (cancel)'
+                    ], 400);
                 }
+            } else {
+                return new DataResponse([
+                    'status' => 2, 
+                    'message' => 'Only accept type 1 or 6'
+                ], 400);
             }
         } catch (\Throwable $e) {
             $this->logger->error("SMS registration error: " . $e->getMessage());
@@ -517,6 +538,20 @@ class PackageRegistrationController extends Controller {
     }
 
     private function validateToken(string $timeStamp, string $customerId, string $customerName, string $token): bool {
-        return true;
+        $rawString = $timeStamp . $customerId . $customerName . $this->cbsHashSecretKey;
+        $expectedBinary = hash('sha256', $rawString, true);
+        $tokenBinary = hex2bin($token);
+
+        if (!$expectedBinary || !$tokenBinary) {
+            $this->logger->debug("Validate token: Hash/Convert string to bin failed!");
+            return false;
+        }
+
+        if (strlen($expectedBinary) != strlen($tokenBinary)) {
+            $this->logger->debug("Validate token: strlen does not equal!");
+            return false;
+        }
+
+        return hash_equals($expectedBinary, $tokenBinary);
     }
 }
