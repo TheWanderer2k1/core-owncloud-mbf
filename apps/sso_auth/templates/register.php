@@ -10,26 +10,26 @@ style('sso_auth', 'auth');
     <div id="general-error" style="color: #ff6b6b; background: rgba(255, 107, 107, 0.1); border: 1px solid #ff6b6b; border-radius: 8px; padding: 10px; margin-bottom: 20px; display: none; text-align: center;"></div>
 
     <div id="input-box" class="grouptop" style="position: relative; margin-bottom: 25px;">
-        <label for="email"><?php p($l->t('Email')); ?></label>
+        <label for="email"><?php p($l->t('Email *')); ?></label>
         <input style="border-radius: 8px" type="email" name="email" id="email"
-            placeholder="<?php p($l->t('Nhập email')); ?>"
+            placeholder="<?php p($l->t('Enter email')); ?>"
             value="" autocomplete="off" autocorrect="off" autofocus>
         <span class="error-message" id="email-error" style="color: #ff6b6b; font-size: 12px; display: none; position: absolute; left: 0; top: 100%; margin-top: 3px;"></span>
     </div>
 
     <div id="input-box" class="groupmiddle" style="position: relative; margin-bottom: 25px;">
-        <label for="phoneNumber"><?php p($l->t('Phone number')); ?></label>
+        <label for="phoneNumber"><?php p($l->t('Phone number *')); ?></label>
         <input style="border-radius: 8px" type="tel" name="phoneNumber" id="phoneNumber"
-            placeholder="<?php p($l->t('0912345678')); ?>"
+            placeholder="<?php p($l->t('Enter phone number')); ?>"
             value="" autocomplete="off" autocorrect="off">
         <span class="error-message" id="phone-error" style="color: #ff6b6b; font-size: 12px; display: none; position: absolute; left: 0; top: 100%; margin-top: 3px;"></span>
     </div>
 
     <div id="input-box" class="groupmiddle" style="position: relative; margin-bottom: 40px;">
-        <label for="password"><?php p($l->t('Password')); ?></label>
+        <label for="password"><?php p($l->t('Password *')); ?></label>
         <div class="password-input-wrapper">
             <input style="border-radius: 8px" type="password" name="password" id="password"
-                placeholder="<?php p($l->t('••••••••')); ?>"
+                placeholder="<?php p($l->t('Enter password')); ?>"
                 value="" autocomplete="off" autocorrect="off">
             <button type="button" class="password-toggle-btn" id="password-toggle" aria-label="Toggle password visibility">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20">
@@ -42,10 +42,10 @@ style('sso_auth', 'auth');
     </div>
 
     <div id="input-box" class="groupbottom" style="position: relative; margin-bottom: 25px;">
-        <label for="confirmPassword"><?php p($l->t('Confirm password')); ?></label>
+        <label for="confirmPassword"><?php p($l->t('Confirm password *')); ?></label>
         <div class="password-input-wrapper">
             <input style="border-radius: 8px" type="password" name="confirmPassword" id="confirmPassword"
-                placeholder="<?php p($l->t('••••••••')); ?>"
+                placeholder="<?php p($l->t('Enter confirm password')); ?>"
                 value="" autocomplete="off" autocorrect="off">
             <button type="button" class="password-toggle-btn" id="confirm-password-toggle" aria-label="Toggle confirm password visibility">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20">
@@ -63,7 +63,7 @@ style('sso_auth', 'auth');
                         border-radius: 8px;
                         background: #fa709a;"
                 type="submit" id="sso-auth-register-submit">
-            <span><?php p($l->t('Đăng ký')); ?></span>
+            <span><?php p($l->t('Register')); ?></span>
             <div class="loading-spinner"><div></div><div></div><div></div><div></div></div>
         </button>
     </div>

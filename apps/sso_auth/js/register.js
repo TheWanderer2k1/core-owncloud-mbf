@@ -5,14 +5,16 @@ document.addEventListener("DOMContentLoaded", function () {
   // Password toggle functionality
   var passwordToggle = document.getElementById("password-toggle");
   var passwordInput = document.getElementById("password");
-  var confirmPasswordToggle = document.getElementById("confirm-password-toggle");
+  var confirmPasswordToggle = document.getElementById(
+    "confirm-password-toggle"
+  );
   var confirmPasswordInput = document.getElementById("confirmPassword");
 
   console.log("Password toggle elements:", {
     passwordToggle: passwordToggle,
     passwordInput: passwordInput,
     confirmPasswordToggle: confirmPasswordToggle,
-    confirmPasswordInput: confirmPasswordInput
+    confirmPasswordInput: confirmPasswordInput,
   });
 
   if (passwordToggle && passwordInput) {
@@ -43,7 +45,10 @@ document.addEventListener("DOMContentLoaded", function () {
   if (confirmPasswordToggle && confirmPasswordInput) {
     confirmPasswordToggle.addEventListener("click", function (e) {
       e.preventDefault();
-      console.log("Confirm password toggle clicked, current type:", confirmPasswordInput.type);
+      console.log(
+        "Confirm password toggle clicked, current type:",
+        confirmPasswordInput.type
+      );
       if (confirmPasswordInput.type === "password") {
         confirmPasswordInput.type = "text";
         confirmPasswordToggle.innerHTML = `
@@ -145,7 +150,7 @@ document.addEventListener("DOMContentLoaded", function () {
           showError(
             "phoneNumber",
             "phone-error",
-            "Phone number is not valid. Example: 0912345678"
+            "Phone number is not valid !"
           );
           hasError = true;
         }
@@ -160,7 +165,7 @@ document.addEventListener("DOMContentLoaded", function () {
           showError(
             "password",
             "password-error",
-            "Mật khẩu phải có tối thiểu 8 ký tự, có chữ HOA và ký tự đặc biệt."
+            "Passwords must be at least 8 characters long and include uppercase letters and special characters !"
           );
           hasError = true;
         }
