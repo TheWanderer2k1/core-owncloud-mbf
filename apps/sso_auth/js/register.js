@@ -125,40 +125,86 @@ document.addEventListener("DOMContentLoaded", function () {
 
       submitBtn.disabled = true;
       let submitBtnSpan = submitBtn.querySelector("span");
-      submitBtnSpan.textContent = t("sso_auth", "Registering...");
-      const response = await fetch(form.action, {
-        method: "POST",
-        body: new FormData(form),
-      });
-      submitBtnSpan.textContent = t("sso_auth", "Register");
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("text/html")) {
-        const html = await response.text();
-        document.open();
-        document.write(html);
-        document.close();
-        return;
-      }
-      const result = await response.json();
-      if (!response.ok) {
-        submitBtn.disabled = false;
-        OC.Notification.showTemporary(
-          t("sso_auth", result.message || "Registration failed.")
-        );
-        return;
+      let originalBtnText = submitBtnSpan.textContent;
+
+      // Clear general error
+      var generalError = document.getElementById("general-error");
+      if (generalError) {
+        generalError.style.display = "none";
+        generalError.textContent = "";
+        generalError.style.borderColor = "#ff6b6b";
+        generalError.style.color = "#ff6b6b";
+        generalError.style.background = "rgba(255, 107, 107, 0.1)";
       }
 
-      OC.Notification.showTemporary(
-        t("sso_auth", "Registration successful. You can now log in.")
-      );
-      setTimeout(() => {
-        window.location.href = OC.generateUrl("/login");
-      }, 1500);
-    } catch (error) {
-      console.error("Error during registration:", error);
-      OC.Notification.showTemporary(
-        t("sso_auth", "An unexpected error occurred. Please try again later.")
-      );
+      submitBtnSpan.textContent = "Registering...";
+
+      try {
+        const response = await fetch(form.action, {
+          method: "POST",
+          body: new FormData(form),
+        });
+
+        submitBtnSpan.textContent = originalBtnText;
+
+        // Handle HTML response (e.g. CSRF error or redirect)
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("text/html")) {
+          const html = await response.text();
+          document.open();
+          document.write(html);
+          document.close();
+          return;
+        }
+
+        const result = await response.json();
+
+        if (!response.ok || result.status === "error") {
+          submitBtn.disabled = false;
+          let errorMsg = result.message || "Registration failed.";
+
+          if (generalError) {
+            generalError.textContent = errorMsg;
+            generalError.style.display = "block";
+          } else {
+            alert(errorMsg);
+          }
+          return;
+        }
+
+        // Success handling
+        let successMsg = "Registration successful. You can now log in.";
+        if (generalError) {
+          generalError.style.borderColor = "#2ecc71";
+          generalError.style.color = "#2ecc71";
+          generalError.style.background = "rgba(46, 204, 113, 0.1)";
+          generalError.textContent = successMsg;
+          generalError.style.display = "block";
+        }
+
+        setTimeout(() => {
+          if (typeof OC !== "undefined" && OC.generateUrl) {
+            window.location.href = OC.generateUrl("/login");
+          } else {
+            window.location.href = "/index.php/login";
+          }
+        }, 1500);
+      } catch (error) {
+        submitBtn.disabled = false;
+        submitBtnSpan.textContent = originalBtnText;
+        console.error("Error during registration:", error);
+        let unexpectedError =
+          "An unexpected error occurred. Please try again later.";
+        if (generalError) {
+          generalError.textContent = unexpectedError;
+          generalError.style.display = "block";
+        } else {
+          alert(unexpectedError);
+        }
+      }
+    } catch (e) {
+      console.error("Critical registration error:", e);
+      submitBtn.disabled = false;
     }
   });
 });

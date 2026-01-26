@@ -7,6 +7,7 @@ style('sso_auth', 'auth');
 
 <form id="sso-auth-register-form" action="<?php p(\OC::$server->getURLGenerator()->linkToRoute('sso_auth.register.register')); ?>" method="post" autocapitalize="none">
     <input type="hidden" name="requesttoken" value="<?php p($_['requesttoken']) ?>">
+    <div id="general-error" style="color: #ff6b6b; background: rgba(255, 107, 107, 0.1); border: 1px solid #ff6b6b; border-radius: 8px; padding: 10px; margin-bottom: 20px; display: none; text-align: center;"></div>
 
     <div id="input-box" class="grouptop" style="position: relative; margin-bottom: 25px;">
         <label for="email"><?php p($l->t('Email')); ?></label>
