@@ -259,58 +259,6 @@ class PackageRegistrationController extends Controller {
             // get subscription status
             try {
                 $subscriptionStatus = $this->subscriptionStatusMapper->findByUserId($ssoId);
-                // check if this subscription corresponds to the given package
-                if ($subscriptionStatus->getPackageId() != $package->getId()) {
-                    $this->logger->debug("Subscription package ID " . $subscriptionStatus->getPackageId() . " does not match given package ID " . $package->getId() . " for user $ssoId");
-                    return new DataResponse([
-                        'status' => 2, 
-                        'message' => 'Subscription package does not match'
-                    ], 400);
-                }
-
-                // check if subscription is still active
-                if ($subscriptionStatus->getStatus() != 'active') {
-                    $this->logger->debug("Subscription for user $ssoId is not active");
-                    return new DataResponse([
-                        'status' => 1, 
-                        'message' => 'No active subscription to cancel'
-                    ], 200);
-                }
-
-                // set subscription status to cancelled
-                $subscriptionStatus->setStatus('cancelled');
-                $this->subscriptionStatusMapper->update($subscriptionStatus);
-
-                // add subscription history
-                $subscriptionHistory = new SubscriptionHistory(
-                    $subscriptionStatus->getId(),
-                    $ssoId,
-                    $package->getId(),
-                    'cancel',
-                    "User $userId cancelled package " . $package->getCode()
-                );
-                $this->subscriptionHistoryMapper->insert($subscriptionHistory);
-
-                // set user quota to default
-                $driveUser->setQuota($this->config->getSystemValue('default_user_quota', '5 GB'));
-
-                // check if user's used space is greater than default quota
-                $usedSpace = $this->getUserUsedSpace($ssoId);
-                $defaultQuotaBytes = \OCP\Util::computerFileSize($this->config->getSystemValue('default_user_quota', '5 GB'));
-                if ($usedSpace === null || $usedSpace > $defaultQuotaBytes) {
-                    $this->logger->debug("User $ssoId used space $usedSpace exceeds default quota $defaultQuotaBytes");
-                    // disable user account
-                    $driveUser->setEnabled(false);
-                    return new DataResponse([
-                        'status' => 1, 
-                        'message' => 'Cancellation successful, account disabled due to used space exceeds default quota'
-                    ], 200);
-                }
-
-                return new DataResponse([
-                    'status' => 1, 
-                    'message' => 'Cancellation successful'
-                ], 200);
             } catch (DoesNotExistException $e) {
                 $this->logger->debug("No subscription status found for user $ssoId");
                 return new DataResponse([
@@ -318,6 +266,59 @@ class PackageRegistrationController extends Controller {
                     'message' => 'No subscription to cancel'
                 ], 400);
             }
+            
+            // check if this subscription corresponds to the given package
+            if ($subscriptionStatus->getPackageId() != $package->getId()) {
+                $this->logger->debug("Subscription package ID " . $subscriptionStatus->getPackageId() . " does not match given package ID " . $package->getId() . " for user $ssoId");
+                return new DataResponse([
+                    'status' => 2, 
+                    'message' => 'Subscription package does not match'
+                ], 400);
+            }
+
+            // check if subscription is still active
+            if ($subscriptionStatus->getStatus() != 'active') {
+                $this->logger->debug("Subscription for user $ssoId is not active");
+                return new DataResponse([
+                    'status' => 1, 
+                    'message' => 'No active subscription to cancel'
+                ], 200);
+            }
+
+            // set subscription status to cancelled
+            $subscriptionStatus->setStatus('cancelled');
+            $this->subscriptionStatusMapper->update($subscriptionStatus);
+
+            // add subscription history
+            $subscriptionHistory = new SubscriptionHistory(
+                $subscriptionStatus->getId(),
+                $ssoId,
+                $package->getId(),
+                'cancel',
+                "User $userId cancelled package " . $package->getCode()
+            );
+            $this->subscriptionHistoryMapper->insert($subscriptionHistory);
+
+            // set user quota to default
+            $driveUser->setQuota($this->config->getSystemValue('default_user_quota', '5 GB'));
+
+            // check if user's used space is greater than default quota
+            $usedSpace = $this->getUserUsedSpace($ssoId);
+            $defaultQuotaBytes = \OCP\Util::computerFileSize($this->config->getSystemValue('default_user_quota', '5 GB'));
+            if ($usedSpace === null || $usedSpace > $defaultQuotaBytes) {
+                $this->logger->debug("User $ssoId used space $usedSpace exceeds default quota $defaultQuotaBytes");
+                // disable user account
+                $driveUser->setEnabled(false);
+                return new DataResponse([
+                    'status' => 1, 
+                    'message' => 'Cancellation successful, account disabled due to used space exceeds default quota'
+                ], 200);
+            }
+
+            return new DataResponse([
+                'status' => 1, 
+                'message' => 'Cancellation successful'
+            ], 200);
         } catch (\Throwable $e) {
             $this->logger->error("SMS cancellation error: " . $e->getMessage());
             return new DataResponse([
