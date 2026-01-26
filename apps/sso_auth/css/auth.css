@@ -13,6 +13,48 @@
     width: 300px;
 }
 
+/* Password input wrapper for toggle button */
+.password-input-wrapper {
+    position: relative;
+    display: block;
+    width: 100%;
+}
+
+.password-input-wrapper input {
+    width: 100% !important;
+    padding-right: 45px !important;
+    box-sizing: border-box;
+}
+
+.password-toggle-btn {
+    position: absolute;
+    right: 8px;
+    top: 47%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+    transition: color 0.2s ease;
+    outline: none;
+    z-index: 10;
+    height: 36px;
+    width: 36px;
+}
+
+
+.password-toggle-btn:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.password-toggle-btn svg {
+    display: block;
+    pointer-events: none;
+}
+
 /* Loading spinner for register button */
 #sso-auth-register-submit .loading-spinner {
     display: none;
