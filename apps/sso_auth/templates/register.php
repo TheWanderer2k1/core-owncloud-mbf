@@ -7,6 +7,7 @@ style('sso_auth', 'auth');
 
 <form id="sso-auth-register-form" action="<?php p(\OC::$server->getURLGenerator()->linkToRoute('sso_auth.register.register')); ?>" method="post" autocapitalize="none">
     <input type="hidden" name="requesttoken" value="<?php p($_['requesttoken']) ?>">
+    <div id="general-error" style="color: #ff6b6b; background: rgba(255, 107, 107, 0.1); border: 1px solid #ff6b6b; border-radius: 8px; padding: 10px; margin-bottom: 20px; display: none; text-align: center;"></div>
 
     <div id="input-box" class="grouptop" style="position: relative; margin-bottom: 25px;">
         <label for="email"><?php p($l->t('Email')); ?></label>
@@ -17,7 +18,7 @@ style('sso_auth', 'auth');
     </div>
 
     <div id="input-box" class="groupmiddle" style="position: relative; margin-bottom: 25px;">
-        <label for="phoneNumber"><?php p($l->t('Số điện thoại')); ?></label>
+        <label for="phoneNumber"><?php p($l->t('Phone number')); ?></label>
         <input style="border-radius: 8px" type="tel" name="phoneNumber" id="phoneNumber"
             placeholder="<?php p($l->t('0912345678')); ?>"
             value="" autocomplete="off" autocorrect="off">
@@ -25,7 +26,7 @@ style('sso_auth', 'auth');
     </div>
 
     <div id="input-box" class="groupmiddle" style="position: relative; margin-bottom: 40px;">
-        <label for="password"><?php p($l->t('Mật khẩu')); ?></label>
+        <label for="password"><?php p($l->t('Password')); ?></label>
         <input style="border-radius: 8px" type="password" name="password" id="password"
             placeholder="<?php p($l->t('••••••••')); ?>"
             value="" autocomplete="off" autocorrect="off">
@@ -33,7 +34,7 @@ style('sso_auth', 'auth');
     </div>
 
     <div id="input-box" class="groupbottom" style="position: relative; margin-bottom: 25px;">
-        <label for="confirmPassword"><?php p($l->t('Xác nhận mật khẩu')); ?></label>
+        <label for="confirmPassword"><?php p($l->t('Confirm password')); ?></label>
         <input style="border-radius: 8px" type="password" name="confirmPassword" id="confirmPassword"
             placeholder="<?php p($l->t('••••••••')); ?>"
             value="" autocomplete="off" autocorrect="off">
@@ -53,10 +54,10 @@ style('sso_auth', 'auth');
 
     <div class="remember-login-container">
         <p style="color: #fff; margin-top: 20px;">
-            <?php p($l->t('Đã có tài khoản?')); ?>
+            <?php p($l->t('Already have an account?')); ?>
             <a href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('core.login.showLoginForm')); ?>"
                style="color: #fff; text-decoration: underline; font-weight: bold;">
-                <?php p($l->t('Đăng nhập')); ?>
+                <?php p($l->t('Login now')); ?>
             </a>
         </p>
     </div>

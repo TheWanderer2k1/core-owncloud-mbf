@@ -141,10 +141,10 @@ script('core', [
 		<!-- Register Link -->
 		<div class="register-link-container">
 			<p style="color: #fff; margin-top: 20px; text-align: center;">
-				<?php p($l->t('Chưa có tài khoản?')); ?>
+				<?php p($l->t('Don\'t have an account yet?')); ?>
 				<a href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('sso_auth.register.index')); ?>"
 				   style="color: #fff; text-decoration: underline; font-weight: bold;">
-					<?php p($l->t('Đăng ký ngay')); ?>
+					<?php p($l->t('Register now')); ?>
 				</a>
 			</p>
 		</div>
