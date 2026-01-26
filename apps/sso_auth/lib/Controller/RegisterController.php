@@ -240,14 +240,14 @@ class RegisterController extends Controller {
             $body = (string) $response->getBody();
             $data = json_decode($body, true);
             if (!isset($data["success"])) {
-                $this->logger->debug("SSO check account response: " . $body);
+                $this->logger->error("SSO check account response: " . $body);
                 throw new \Exception("There is no success field in response");
             }
             if (!(bool)$data["success"] && isset($data["result"]["ssoId"])) {
-                $this->logger->debug("SSO check account indicates existence: " . $data["result"]["ssoId"]);
+                $this->logger->error("SSO check account indicates existence: " . $data["result"]["ssoId"]);
                 return $data["result"]["ssoId"];
             }
-            $this->logger->debug("SSO check account indicates non-existence: " . $body);
+            $this->logger->error("SSO check account indicates non-existence: " . $body);
             return null;
         } catch (\Throwable $e) {
             $this->logger->error("SSO check account error: " . $e->getMessage());
@@ -271,15 +271,10 @@ class RegisterController extends Controller {
                 'isAdmin' => false,
                 'tenantCode' => $this->clientId . "-TENANT",
                 'domain' => 'https://drive.mobifone.vn',
+                'registerType' => 0,
+                'email' => $email,
+                'phoneNumber' => $phoneNumber,
             ];
-            if ($email !== null) {
-                $body['email'] = $email;
-                $body['registerType'] = 0;
-            }
-            if ($phoneNumber !== null) {
-                $body['phoneNumber'] = $phoneNumber;
-                $body['registerType'] = 1;
-            }
             $response = $client->post($url, [
                 'body' => json_encode($body),
                 'headers' => [
@@ -287,10 +282,11 @@ class RegisterController extends Controller {
                     'Authorization' => 'Bearer ' . $token
                 ]
             ]);
+            $this->logger->error("SSO create account with body: " . json_encode($body));
             $body = (string) $response->getBody();
             $data = json_decode($body, true);
             if (!$data["success"]) {
-                $this->logger->debug("SSO create account response: " . $body);
+                
                 throw new \Exception("Response indicates failure");
             }
 
