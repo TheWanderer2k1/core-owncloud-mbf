@@ -10,7 +10,7 @@ class Section implements ISection {
     }
 
     public function getName() {
-        return 'Package Manager';
+        return 'CBS Configuration';
     }
 
     public function getPriority() {

@@ -1,0 +1,21 @@
+#packagemanager-config-form .form-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+#packagemanager-config-form label {
+    display: inline-block;
+    width: 150px;
+    font-weight: bold;
+}
+
+#packagemanager-config-form input[type="text"],
+#packagemanager-config-form input[type="url"] {
+    width: 300px;
+    margin-left: 10px;
+}
+
+#packagemanager-config-form button {
+    margin-top: 20px;
+}
