@@ -62,7 +62,7 @@ class PackageRegistrationController extends Controller {
      * @NoCSRFRequired
      */
     public function register(int $type = 0, string $timeStamp = '', string $customerId = '', string $customerName = '', 
-                            string $token = '', array $listPackage = [], string $ssoCustomerId = '', 
+                            string $token = '', array $listPackage = [], string $customerEmail = '', string $ssoCustomerId = '', 
                             string $tenantCode = '', string $contractNo = ''): DataResponse {
         try {
             // validate input
@@ -139,7 +139,7 @@ class PackageRegistrationController extends Controller {
                     $driveUser = $this->userManager->get($ssoId);
                     if (!$driveUser) {
                         // create Drive account from sso id
-                        $driveUser = $this->createDriveUserFromSSOId($ssoId, null);
+                        $driveUser = $this->createDriveUserFromSSOId($ssoId, $customerEmail);
                         if (!$driveUser) {
                             $this->logger->error("Failed to create Drive user for SSO id: " . $ssoId);
                             throw new \Exception("Failed to create Drive user");
@@ -222,7 +222,7 @@ class PackageRegistrationController extends Controller {
                 ], 400);
             }
         } catch (\Throwable $e) {
-            $this->logger->error("SMS registration error: " . $e->getMessage());
+            $this->logger->error("CBS Register error: " . $e->getMessage());
             return new DataResponse([
                 'status' => 2, 
                 'message' => 'An error occurred during registration'
