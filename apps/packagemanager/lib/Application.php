@@ -46,6 +46,15 @@ class Application extends App {
 				$c->query('CustomLogService')
 			);
 		});
+
+		$container->registerService('PackageManagerConfigController', function(IContainer $c) {
+			return new \OCA\PackageManager\Controller\ConfigController(
+				$c->query('AppName'),
+				$c->query('Request'),
+				$c->query('ServerContainer')->getConfig(),
+				$c->query('CustomLogService')
+			);
+		});
 		
 		// Register services
 		$container->registerService('DatabaseConnection', function(IContainer $c) {
