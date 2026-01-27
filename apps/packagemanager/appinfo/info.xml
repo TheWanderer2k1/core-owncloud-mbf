@@ -16,4 +16,8 @@
 
 	<use-migrations>true</use-migrations>
 
+	<settings>
+		<section>OCA\PackageManager\Settings\Section</section>
+		<admin>OCA\PackageManager\Settings\Admin</admin>
+	</settings>
 </info>
