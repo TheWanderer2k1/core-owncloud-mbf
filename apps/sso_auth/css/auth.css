@@ -1,0 +1,97 @@
+/* ============================================
+   SSO Auth - Auth Page Styles (Login & Register)
+   Match the style of /index.php/login
+   ============================================ */
+
+/* Register form uses the same styles as main login page */
+/* The background, grouptop, groupbottom, etc. are already defined in core/css/styles.css */
+
+/* Only add minimal overrides if needed */
+#sso-auth-register-form {
+    position: relative;
+    margin: 32px auto;
+    width: 300px;
+}
+
+/* Password input wrapper for toggle button */
+.password-input-wrapper {
+    position: relative;
+    display: block;
+    width: 100%;
+}
+
+.password-input-wrapper input {
+    width: 100% !important;
+    padding-right: 45px !important;
+    box-sizing: border-box;
+}
+
+.password-toggle-btn {
+    position: absolute;
+    right: 8px;
+    top: 47%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+    transition: color 0.2s ease;
+    outline: none;
+    z-index: 10;
+    height: 36px;
+    width: 36px;
+}
+
+
+.password-toggle-btn:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.password-toggle-btn svg {
+    display: block;
+    pointer-events: none;
+}
+
+/* Loading spinner for register button */
+#sso-auth-register-submit .loading-spinner {
+    display: none;
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+#sso-auth-register-submit.loading .loading-spinner {
+    display: inline-block;
+}
+
+#sso-auth-register-submit .loading-spinner div {
+    width: 8px;
+    height: 8px;
+    background-color: #fff;
+    border-radius: 50%;
+    display: inline-block;
+    animation: loading-bounce 1.4s infinite ease-in-out both;
+    margin: 0 2px;
+}
+
+#sso-auth-register-submit .loading-spinner div:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+#sso-auth-register-submit .loading-spinner div:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes loading-bounce {
+    0%, 80%, 100% {
+        transform: scale(0);
+    }
+    40% {
+        transform: scale(1);
+    }
+}
+

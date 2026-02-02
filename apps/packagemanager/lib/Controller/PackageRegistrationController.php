@@ -62,19 +62,23 @@ class PackageRegistrationController extends Controller {
      * @NoCSRFRequired
      */
     public function register(int $type = 0, string $timeStamp = '', string $customerId = '', string $customerName = '', 
-                            string $token = '', array $listPackage = [], string $ssoCustomerId = '', 
+                            string $token = '', array $listPackage = [], string $customerEmail = '', string $ssoCustomerId = '', 
                             string $tenantCode = '', string $contractNo = ''): DataResponse {
         try {
             // validate input
             if (empty($type) || empty($timeStamp) || empty($customerId) || empty($customerName) ||
-            empty($token) || empty($listPackage) || empty($ssoCustomerId) || empty($tenantCode) ||
-            empty($contractNo)) {
+                empty($token) || empty($ssoCustomerId) || empty($tenantCode) || empty($contractNo)) {
                 return new DataResponse([
                     'status' => 2,
                     'message' => 'Invalid input'
                 ], 400);
             }
-
+            if ($type == 6 && empty($listPackage)) {
+                return new DataResponse([
+                    'status' => 2,
+                    'message' => 'List package is required'
+                ], 400);
+            }
             // validate token
             if (!$this->validateToken($timeStamp, $customerId, $customerName, $token)) {
                 return new DataResponse([
@@ -84,36 +88,45 @@ class PackageRegistrationController extends Controller {
             }
 
             if ($type == 1) {
-                // call complete create contract cbs api
+                /* Call complete create contract cbs api */
                 $client = $this->http->newClient();
-                $url = rtrim($this->cbsApiBaseUrl, '/') . '/customer/completeCreateContract';
-                $response = $client->post($url, [
-                    'body' => json_encode([
-                        'accessLink' => 'https://drive.mobifone.vn',
-                        'domain' => 'https://drive.mobifone.vn',
-                        'tenantCode' => $tenantCode,
-                        'contractNo' => $contractNo,
-                        'productCode' => $this->cbsProductCode
-                    ]),
-                    'headers' => [
-                        'Content-Type' => 'application/json',
-                        'Authorization' => 'Basic base64encodedcredentialshere'
-                    ]
-                ]);
+                $url = rtrim($this->cbsApiBaseUrl, '/') . '/api/v1/customer/completeCreateContract';
+                $authString = $this->cbsAdminUser . ':' . $this->cbsAdminPass;
+                $base64String = base64_encode($authString);
+                try {
+                   $response = $client->post($url, [
+                        'body' => json_encode([
+                            'accessLink' => 'https://drive.mobifone.vn',
+                            'domain' => 'https://drive.mobifone.vn',
+                            'tenantCode' => $tenantCode,
+                            'contractNo' => $contractNo,
+                            'productCode' => $this->cbsProductCode
+                        ]),
+                        'headers' => [
+                            'Content-Type' => 'application/json',
+                            'Authorization' => 'Basic ' . $base64String
+                        ]
+                    ]);
                 return new DataResponse([
                     'status' => 1, 
                     'message' => 'Complete create contract processed'
                 ], 200);
+                } catch (\Throwable $th) {
+                    return new DataResponse([
+                        'status' => 2, 
+                        'message' => 'Complete contract failed'
+                    ], 500);
+                }
             } elseif ($type == 6) {
                 $packageInfo = $listPackage[0];
                 $ssoId = $ssoCustomerId;
                 $packageCode = $packageInfo['packageCode'];
                 if ($packageInfo['action'] == 1) {
-                    // register
+                    /* Register */
                     if (empty($ssoId)) {
                         return new DataResponse([
                             'status' => 2, 
-                            'message' => 'SSO ID is required'
+                            'message' => 'ssoCustomerId is required'
                         ], 400);
                     }
 
@@ -123,43 +136,41 @@ class PackageRegistrationController extends Controller {
                             'message' => 'Package code is required'
                         ], 400);
                     }
-
-                    // get this package info from db
+                    /* Get this package info from db */
                     try {
                         $package = $this->packageMapper->findByCode($packageCode);
                     } catch (DoesNotExistException $e) {
-                        $this->logger->debug("Package not found: " . $packageCode);
+                        $this->logger->error("Package not found: " . $packageCode);
                         return new DataResponse([
                             'status' => 2, 
                             'message' => "Package $packageCode not found"
                         ], 404);
                     }
-
-                    // check if Drive user already exists
+                    /* Check if Drive user already exists in local database */
                     $driveUser = $this->userManager->get($ssoId);
                     if (!$driveUser) {
-                        // create Drive account from sso id
-                        $driveUser = $this->createDriveUserFromSSOId($ssoId, null);
+                        /* Create Drive account from sso id */
+                        $driveUser = $this->createDriveUserFromSSOId($ssoId, $customerEmail);
                         if (!$driveUser) {
                             $this->logger->error("Failed to create Drive user for SSO id: " . $ssoId);
                             throw new \Exception("Failed to create Drive user");
                         }
-                        // modify subscription status
+                        /* Modify subscription status */
                         $result = $this->modifySubscriptionStatus($ssoId, $package, 'subscribe');
                         if (!$result) {
                             throw new \Exception("Failed to modify subscription status for new user $ssoId");
                         }
-                        // update user quota
+                        /* Update user quota */
                         $driveUser->setQuota($package->getQuota());
                         return new DataResponse([
                             'status' => 1, 
-                            'message' => 'Registration successful'
+                            'message' => 'Registration successfully'
                         ], 200);
                     }
 
-                    // check if Drive user is active
+                    /* Check if Drive user is active */
                     if (!$driveUser->isEnabled()) {
-                        // check if user's used space is greater than this package quota
+                        /* Check if user's used space is greater than this package quota */
                         $usedSpace = $this->getUserUsedSpace($ssoId);
                         if ($usedSpace === null) {
                             $this->logger->error("Failed to get used space for user $ssoId");
@@ -174,40 +185,41 @@ class PackageRegistrationController extends Controller {
                             ], 400);
                         }
 
-                        // (re)activate user
+                        /* (Re)activate user */
                         $driveUser->setEnabled(true);
 
-                        // add new/update record to subscription_status
+                        /* Add new/update record to subscription_status */
                         $result = $this->modifySubscriptionStatus($ssoId, $package, 'subscribe');
                         if (!$result) {
                             throw new \Exception("Failed to modify subscription status for re-activated user $ssoId");
                         }
 
-                        // update user quota
+                        /* Update user quota */
                         $driveUser->setQuota($package->getQuota());
 
-                        // return success
+                        /* Return success */
                         return new DataResponse([
                             'status' => 1, 
                             'message' => 'Registration successful'
                         ], 200);
                     }
 
-                    // modify subscription status
+                    /* Modify subscription status */
                     $result = $this->modifySubscriptionStatus($ssoId, $package, 'subscribe');
                     if (!$result) {
                         throw new \Exception("Failed to modify subscription status for existing user $ssoId");
                     }
 
-                    // update user quota
+                    /* Update user q    uota */
                     $driveUser->setQuota($package->getQuota());
 
+                    /* Return success */
                     return new DataResponse([
                         'status' => 1,
                         'message' => 'Registration successful'
                     ], 200);
                 } elseif ($packageInfo['action'] == 3) {
-                    // cancel
+                    /* Cancel */
                     return $this->cancel($ssoId, $packageCode);
                 } else {
                     return new DataResponse([
@@ -222,7 +234,7 @@ class PackageRegistrationController extends Controller {
                 ], 400);
             }
         } catch (\Throwable $e) {
-            $this->logger->error("SMS registration error: " . $e->getMessage());
+            $this->logger->error("CBS Register error: " . $e->getMessage());
             return new DataResponse([
                 'status' => 2, 
                 'message' => 'An error occurred during registration'
@@ -232,85 +244,82 @@ class PackageRegistrationController extends Controller {
 
     private function cancel(string $ssoId, string $packageCode): DataResponse {
         try {
-            //validate input
+            /* Validate input */
             if (empty($ssoId)) {
                 return new DataResponse([
                     'status' => 2, 
-                    'message' => 'SSO ID is required'
+                    'message' => 'ssoCustomerId is required'
                 ], 400);
             }
-
             if (empty($packageCode)) {
                 return new DataResponse([
                     'status' => 2, 
                     'message' => 'Package code is required'
                 ], 400);
             }
-
-            // get this package info from db
+            /* Get this package info from db */
             try {
                 $package = $this->packageMapper->findByCode($packageCode);
             } catch (DoesNotExistException $e) {
-                $this->logger->debug("Package not found: " . $packageCode);
+                $this->logger->error("Package not found: " . $packageCode);
                 return new DataResponse([
                     'status' => 2, 
                     'message' => "Package $packageCode not found"
                 ], 404);
             }
-
-            // check if Drive user already exists
+            /* Check if Drive user already exists */
             $driveUser = $this->userManager->get($ssoId);
             if (!$driveUser) {
-                $this->logger->debug("Drive user not found for SSO id: " . $ssoId);
+                $this->logger->error("Drive user not found for SSO id: " . $ssoId);
                 return new DataResponse([
                     'status' => 2, 
                     'message' => "Drive user not found"
                 ], 404);
             }
 
-            // check if Drive user is active
+            /* Check if Drive user is active */
             if (!$driveUser->isEnabled()) {
-                $this->logger->debug("Drive user $ssoId is already disabled");
+                $this->logger->error("Drive user $ssoId is already disabled");
                 return new DataResponse([
                     'status' => 2, 
                     'message' => 'Account is already disabled'
                 ], 400);
             }
 
-            // get subscription status
+            /* Get subscription status */
             try {
                 $subscriptionStatus = $this->subscriptionStatusMapper->findByUserId($ssoId);
             } catch (DoesNotExistException $e) {
-                $this->logger->debug("No subscription status found for user $ssoId");
+                $this->logger->error("No subscription status found for user $ssoId");
                 return new DataResponse([
                     'status' => 2, 
                     'message' => 'No subscription to cancel'
                 ], 400);
             }
             
-            // check if this subscription corresponds to the given package
+            /* Check if this subscription corresponds to the given package */
             if ($subscriptionStatus->getPackageId() != $package->getId()) {
-                $this->logger->debug("Subscription package ID " . $subscriptionStatus->getPackageId() . " does not match given package ID " . $package->getId() . " for user $ssoId");
+                $this->logger->error("Subscription package ID " . $subscriptionStatus->getPackageId() . " does not match given package ID " . $package->getId() . " for user $ssoId");
                 return new DataResponse([
                     'status' => 2, 
                     'message' => 'Subscription package does not match'
                 ], 400);
             }
 
-            // check if subscription is still active
+            /* Check if subscription is still active */
             if ($subscriptionStatus->getStatus() != 'active') {
-                $this->logger->debug("Subscription for user $ssoId is not active");
+                $this->logger->error("Subscription for user $ssoId is not active");
                 return new DataResponse([
                     'status' => 1, 
                     'message' => 'No active subscription to cancel'
                 ], 200);
             }
 
-            // set subscription status to cancelled
+            /* Set subscription status to cancelled */
             $subscriptionStatus->setStatus('cancelled');
             $this->subscriptionStatusMapper->update($subscriptionStatus);
 
-            // add subscription history
+            /* Add subscription history */
             $subscriptionHistory = new SubscriptionHistory(
                 $subscriptionStatus->getId(),
                 $ssoId,
@@ -320,10 +329,10 @@ class PackageRegistrationController extends Controller {
             );
             $this->subscriptionHistoryMapper->insert($subscriptionHistory);
 
-            // set user quota to default
+            /* Set user quota to default */
             $driveUser->setQuota($this->config->getSystemValue('default_user_quota', '5 GB'));
 
-            // check if user's used space is greater than default quota
+            /* Check if user's used space is greater than default quota */
             $usedSpace = $this->getUserUsedSpace($ssoId);
             $defaultQuotaBytes = \OCP\Util::computerFileSize($this->config->getSystemValue('default_user_quota', '5 GB'));
             if ($usedSpace === null || $usedSpace > $defaultQuotaBytes) {
@@ -338,10 +347,10 @@ class PackageRegistrationController extends Controller {
 
             return new DataResponse([
                 'status' => 1, 
-                'message' => 'Cancellation successful'
+                'message' => 'Cancellation successfully'
             ], 200);
         } catch (\Throwable $e) {
-            $this->logger->error("SMS cancellation error: " . $e->getMessage());
+            $this->logger->error("CBS cancellation error: " . $e->getMessage());
             return new DataResponse([
                 'status' => 2, 
                 'message' => 'An error occurred during cancellation'
@@ -367,7 +376,11 @@ class PackageRegistrationController extends Controller {
             }
             $newUser->setQuota($this->config->getSystemValue('default_user_quota', '5 GB'));
             $defaultGroup = \OC::$server->getGroupManager()->get('default'); // default group must exist first
-            $defaultGroup->addUser($newUser);
+            if ($defaultGroup) {
+                $defaultGroup->addUser($newUser);
+            } else {
+                $this->logger->error('Default group does not exist. User created but not added to any group.');
+            }
             return $newUser;
         } catch (\Exception $e) {
             $this->logger->error('Create Drive user error: ' . $e->getMessage());
