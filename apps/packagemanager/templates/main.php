@@ -58,6 +58,9 @@ $l = $_['l'];
 				<th id="headerPrice" class="column-price">
 					<a class="price sort columntitle" data-sort="price"><span><?php p($l->t('Price')); ?></span><span class="sort-indicator"></span></a>
 				</th>
+				<th id="headerQuota" class="column-quota">
+					<a class="quota sort columntitle" data-sort="quota"><span><?php p($l->t('Quota')); ?></span><span class="sort-indicator"></span></a>
+				</th>
 				<th id="headerDuration" class="column-duration">
 					<a class="duration sort columntitle" data-sort="duration"><span><?php p($l->t('Duration')); ?></span><span class="sort-indicator"></span></a>
 				</th>
@@ -97,6 +100,10 @@ $l = $_['l'];
 			<div class="form-group">
 				<label for="modal-package-price"><?php p($l->t('Price *')); ?></label>
 				<input type="number" id="modal-package-price" name="price" step="1" required placeholder="0">
+			</div>
+			<div class="form-group">
+				<label for="modal-package-quota"><?php p($l->t('Quota *')); ?></label>
+				<input type="text" id="modal-package-quota" name="quota" required placeholder="<?php p($l->t('Enter quota')); ?>">
 			</div>
 			<div class="form-group">
 				<label for="modal-package-duration"><?php p($l->t('Duration *')); ?></label>

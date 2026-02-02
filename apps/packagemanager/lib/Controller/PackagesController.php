@@ -30,7 +30,7 @@ class PackagesController extends Controller {
 		try {
 			$qb = $this->db->getQueryBuilder();
 			$qb->select('*')
-				->from('packages')
+				->from('packagemanager_packages')
 				->setMaxResults($limit)
 				->setFirstResult($offset);
 			
@@ -54,7 +54,7 @@ class PackagesController extends Controller {
 	 * @NoAdminRequired
 	 * Create a new package
 	 */
-	public function create($name, $code, $price, $duration, $unit) {
+	public function create($name, $code, $price, $quota, $duration, $unit) {
 		try {
 			// Validate input
 			if (empty($name) || empty($code)) {
@@ -67,7 +67,7 @@ class PackagesController extends Controller {
 			// Check if code already exists
 			$qb = $this->db->getQueryBuilder();
 			$qb->select('id')
-				->from('packages')
+				->from('packagemanager_packages')
 				->where($qb->expr()->eq('code', $qb->createNamedParameter($code)));
 			
 			$result = $qb->execute();
@@ -77,16 +77,17 @@ class PackagesController extends Controller {
 			if ($exists) {
 				return new DataResponse([
 					'status' => 'error',
-					'message' => $this->l->t('Package code already exists')
+					'message' => $this->l->t('Package code already exists'),
 				], 400);
 			}
 			
 			// Insert new package
 			$qb = $this->db->getQueryBuilder();
-			$qb->insert('packages')
+			$qb->insert('packagemanager_packages')
 				->values([
 					'name' => $qb->createNamedParameter($name),
 					'code' => $qb->createNamedParameter($code),
+					'quota' => $qb->createNamedParameter($quota),
 					'price' => $qb->createNamedParameter($price),
 					'duration' => $qb->createNamedParameter($duration),
 					'unit' => $qb->createNamedParameter($unit)
@@ -118,7 +119,7 @@ class PackagesController extends Controller {
 	 * @NoAdminRequired
 	 * Update a package
 	 */
-	public function update($id, $name, $code, $price, $duration, $unit) {
+	public function update($id, $name, $code, $price, $quota, $duration, $unit) {
 		try {
 			// Validate input
 			if (empty($name) || empty($code)) {
@@ -131,7 +132,7 @@ class PackagesController extends Controller {
 			// Check if code already exists for another package
 			$qb = $this->db->getQueryBuilder();
 			$qb->select('id')
-				->from('packages')
+				->from('packagemanager_packages')
 				->where($qb->expr()->eq('code', $qb->createNamedParameter($code)))
 				->andWhere($qb->expr()->neq('id', $qb->createNamedParameter($id)));
 			
@@ -148,10 +149,11 @@ class PackagesController extends Controller {
 			
 			// Update package
 			$qb = $this->db->getQueryBuilder();
-			$qb->update('packages')
+			$qb->update('packagemanager_packages')
 				->set('name', $qb->createNamedParameter($name))
 				->set('code', $qb->createNamedParameter($code))
 				->set('price', $qb->createNamedParameter($price))
+				->set('quota', $qb->createNamedParameter($quota))
 				->set('duration', $qb->createNamedParameter($duration))
 				->set('unit', $qb->createNamedParameter($unit))
 				->where($qb->expr()->eq('id', $qb->createNamedParameter($id)));
@@ -184,7 +186,7 @@ class PackagesController extends Controller {
 	public function destroy($id) {
 		try {
 			$qb = $this->db->getQueryBuilder();
-			$qb->delete('packages')
+			$qb->delete('packagemanager_packages')
 				->where($qb->expr()->eq('id', $qb->createNamedParameter($id)));
 			
 			$qb->execute();

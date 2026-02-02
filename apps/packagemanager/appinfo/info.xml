@@ -14,5 +14,10 @@
 		<owncloud min-version="10" max-version="10.99" />
 	</dependencies>
 
+	<use-migrations>true</use-migrations>
 
+	<settings>
+		<section>OCA\PackageManager\Settings\Section</section>
+		<admin>OCA\PackageManager\Settings\Admin</admin>
+	</settings>
 </info>

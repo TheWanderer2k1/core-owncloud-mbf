@@ -32,6 +32,29 @@ class Application extends App {
 				$c->query('L10N')
 			);
 		});
+
+		$container->registerService('PackageRegistrationController', function(IContainer $c) {
+			return new \OCA\PackageManager\Controller\PackageRegistrationController(
+				$c->query('AppName'),
+				$c->query('Request'),
+				$c->query('ServerContainer')->getConfig(),
+				$c->query('ServerContainer')->getHTTPClientService(),
+				$c->query('ServerContainer')->getUserManager(),
+				$c->query('PackageMapper'),
+				$c->query('SubscriptionStatusMapper'),
+				$c->query('SubscriptionHistoryMapper'),
+				$c->query('CustomLogService')
+			);
+		});
+
+		$container->registerService('PackageManagerConfigController', function(IContainer $c) {
+			return new \OCA\PackageManager\Controller\ConfigController(
+				$c->query('AppName'),
+				$c->query('Request'),
+				$c->query('ServerContainer')->getConfig(),
+				$c->query('CustomLogService')
+			);
+		});
 		
 		// Register services
 		$container->registerService('DatabaseConnection', function(IContainer $c) {
@@ -40,6 +63,30 @@ class Application extends App {
 		
 		$container->registerService('L10N', function(IContainer $c) {
 			return $c->query('ServerContainer')->getL10N('packagemanager');
+		});
+
+		$container->registerService('CustomLogService', function(IContainer $c) {
+			return new \OCA\PackageManager\Service\LogService(
+				$c->query('ServerContainer')->getConfig()
+			);
+		});
+
+		$container->registerService('PackageMapper', function(IContainer $c) {
+			return new \OCA\PackageManager\Db\PackageMapper(
+				$c->query('DatabaseConnection')
+			);
+		});
+
+		$container->registerService('SubscriptionStatusMapper', function(IContainer $c) {
+			return new \OCA\PackageManager\Db\SubscriptionStatusMapper(
+				$c->query('DatabaseConnection')
+			);
+		});
+
+		$container->registerService('SubscriptionHistoryMapper', function(IContainer $c) {
+			return new \OCA\PackageManager\Db\SubscriptionHistoryMapper(
+				$c->query('DatabaseConnection')
+			);
 		});
 	}
 }
