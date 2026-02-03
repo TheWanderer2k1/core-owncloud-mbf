@@ -42,6 +42,10 @@
 !/apps/sso_auth/**
 /apps/sso_auth/vendor/
 
+!/apps/packagemanager
+!/apps/packagemanager/**
+/apps/packagemanager/vendor/
+
 /lib/composer
 /apps/files_external/3rdparty/*
 

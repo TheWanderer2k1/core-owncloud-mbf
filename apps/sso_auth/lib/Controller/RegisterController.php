@@ -46,7 +46,7 @@ class RegisterController extends Controller {
      * @PublicPage
      */
     public function index() {
-        return new TemplateResponse($this->appName, 'register');
+        return new TemplateResponse($this->appName, 'register', [], 'guest');
     }
 
     /**
@@ -70,23 +70,19 @@ class RegisterController extends Controller {
             }
 
             // call api check SSO account
-            // if account exists, redirect user to login page with message
+            // if account exists, return error message
             // else create account in SSO and Drive
             $exists = $this->checkSSOAccount($email, $phoneNumber);
+            $this->logger->error("SSO account already exists for email: $email, phone: $phoneNumber, exists: $exists");
             if ($exists) {
-                $parameters = [
-                    'email' => $email,
-                    'phoneNumber' => $phoneNumber
-                ];
-                return new TemplateResponse($this->appName, 'login', $parameters);
+                return new DataResponse(['status' => 'error', 'message' => 'Email or phone number already exist!'], 400);
             }
-
+            $this->logger->error("SSO account does not exist for email: $email, phone: $phoneNumber");
             // call api create SSO account
             $uid = $this->createSSOAccount($email, $phoneNumber, $password);
             if (!$uid) {
                 throw new \Exception("Failed to create SSO account");
             }
-
             // create OwnCloud user with sso id as uid
             $newUser = $this->createDriveUserFromSSOId($uid, $email);
             if (!$newUser) {
@@ -244,14 +240,14 @@ class RegisterController extends Controller {
             $body = (string) $response->getBody();
             $data = json_decode($body, true);
             if (!isset($data["success"])) {
-                $this->logger->debug("SSO check account response: " . $body);
+                $this->logger->error("SSO check account response: " . $body);
                 throw new \Exception("There is no success field in response");
             }
             if (!(bool)$data["success"] && isset($data["result"]["ssoId"])) {
-                $this->logger->debug("SSO check account indicates existence: " . $data["result"]["ssoId"]);
+                $this->logger->error("SSO check account indicates existence: " . $data["result"]["ssoId"]);
                 return $data["result"]["ssoId"];
             }
-            $this->logger->debug("SSO check account indicates non-existence: " . $body);
+            $this->logger->error("SSO check account indicates non-existence: " . $body);
             return null;
         } catch (\Throwable $e) {
             $this->logger->error("SSO check account error: " . $e->getMessage());
@@ -275,15 +271,10 @@ class RegisterController extends Controller {
                 'isAdmin' => false,
                 'tenantCode' => $this->clientId . "-TENANT",
                 'domain' => 'https://drive.mobifone.vn',
+                'registerType' => 0,
+                'email' => $email,
+                'phoneNumber' => $phoneNumber,
             ];
-            if ($email !== null) {
-                $body['email'] = $email;
-                $body['registerType'] = 0;
-            }
-            if ($phoneNumber !== null) {
-                $body['phoneNumber'] = $phoneNumber;
-                $body['registerType'] = 1;
-            }
             $response = $client->post($url, [
                 'body' => json_encode($body),
                 'headers' => [
@@ -291,10 +282,11 @@ class RegisterController extends Controller {
                     'Authorization' => 'Bearer ' . $token
                 ]
             ]);
+            $this->logger->error("SSO create account with body: " . json_encode($body));
             $body = (string) $response->getBody();
             $data = json_decode($body, true);
             if (!$data["success"]) {
-                $this->logger->debug("SSO create account response: " . $body);
+                
                 throw new \Exception("Response indicates failure");
             }
 
@@ -348,7 +340,11 @@ class RegisterController extends Controller {
                 }
                 $newUser->setQuota($this->config->getSystemValue('default_user_quota', '5 GB'));
                 $defaultGroup = \OC::$server->getGroupManager()->get('default'); // default group must exist first
-                $defaultGroup->addUser($newUser);
+                if ($defaultGroup) {
+                    $defaultGroup->addUser($newUser);
+                } else {
+                    $this->logger->error('Default group does not exist. User created but not added to any group.');
+                }
             }
             return $newUser;
         } catch (\Exception $e) {
