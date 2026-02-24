@@ -195,6 +195,9 @@ class Factory implements IFactory {
 			$available = \array_merge($available, $this->findAvailableLanguageFiles($themeDir));
 		}
 
+		// restrict to only English and Vietnamese
+		$available = \array_values(\array_intersect($available, ['en', 'vi']));
+
 		$this->availableLanguages[$key] = $available;
 		return $available;
 	}

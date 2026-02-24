@@ -1,10 +1,34 @@
-{ "translations": {
-    "File is already shared with %s" : "File đã được chia sẻ với %s",
-    "Accept" : "Đồng ý",
-    "Decline" : "Từ chối",
-    "Open documentation" : "Mở tài liệu",
-    "Share it:" : "Chia sẻ nó :",
-    "Add to your website" : "Thêm vào website của bạn",
-    "Share with me via ownCloud" : "Chia sẻ với tôi thông qua ownCloud"
-},"pluralForm" :"nplurals=1; plural=0;"
-}
+ { "translations": {
+     "Federated sharing" : "Chia sẻ liên kết",
+     "Add to" : "Thêm vào",
+     "Loading..." : "Đang tải...",
+     "Change server..." : "Đổi máy chủ...",
+     "Invalid Federated Cloud ID" : "ID Federated Cloud không hợp lệ",
+     "Sharing %s failed, because this item is already shared with %s" : "Chia sẻ %s thất bại vì mục này đã được chia sẻ với %s",
+     "Not allowed to create a federated share with the same user" : "Không được phép tạo chia sẻ liên kết với cùng người dùng",
+     "File is already shared with %s" : "Tệp đã được chia sẻ với %s",
+     "Sharing %s failed, could not find %s, maybe the server is currently unreachable." : "Chia sẻ %s thất bại, không tìm thấy %s, có thể máy chủ hiện không thể truy cập.",
+     "Federated Sharing failed: %s" : "Chia sẻ liên kết thất bại: %s",
+     "\"%1$s\" shared \"%3$s\" with you (on behalf of \"%2$s\")" : "\"%1$s\" đã chia sẻ \"%3$s\" với bạn (thay mặt \"%2$s\")",
+     "\"%1$s\" shared \"%3$s\" with you" : "\"%1$s\" đã chia sẻ \"%3$s\" với bạn",
+     "\"%1$s\" invited you to view \"%3$s\" (on behalf of \"%2$s\")" : "\"%1$s\" đã mời bạn xem \"%3$s\" (thay mặt \"%2$s\")",
+     "\"%1$s\" invited you to view \"%3$s\"" : "\"%1$s\" đã mời bạn xem \"%3$s\"",
+     "Accept" : "Chấp nhận",
+     "Decline" : "Từ chối",
+     "Share with me through my #ownCloud Federated Cloud ID, see %s" : "Chia sẻ với tôi qua ID Federated Cloud #ownCloud của tôi, xem %s",
+     "Share with me through my #ownCloud Federated Cloud ID" : "Chia sẻ với tôi qua ID Federated Cloud #ownCloud của tôi",
+     "Federated Cloud Sharing" : "Chia sẻ Federated Cloud",
+     "Open documentation" : "Mở tài liệu",
+     "Periodically synchronize outdated federated shares for active users" : "Định kỳ đồng bộ các chia sẻ liên kết lỗi thời cho người dùng đang hoạt động",
+     "Allow users on this server to send shares to other servers" : "Cho phép người dùng trên máy chủ này gửi chia sẻ đến máy chủ khác",
+     "Allow users on this server to receive shares from other servers" : "Cho phép người dùng trên máy chủ này nhận chia sẻ từ máy chủ khác",
+     "Automatically accept federated shares from trusted servers" : "Tự động chấp nhận chia sẻ liên kết từ máy chủ tin cậy",
+     "Federated Cloud" : "Federated Cloud",
+     "Your Federated Cloud ID:" : "ID Federated Cloud của bạn:",
+     "Share it:" : "Chia sẻ:",
+     "Add to your website" : "Thêm vào trang web của bạn",
+     "Share with me via ownCloud" : "Chia sẻ với tôi qua ownCloud",
+     "HTML Code:" : "Mã HTML:",
+     "Nothing to configure." : "Không có gì để cấu hình."
+ },"pluralForm" :"nplurals=1; plural=0;"
+ }
