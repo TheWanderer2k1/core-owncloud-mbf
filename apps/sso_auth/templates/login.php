@@ -14,11 +14,11 @@ style('sso_auth', 'auth');
     <!-- Toggle between Login and Register -->
     <div class="auth-toggle">
         <span class="auth-toggle-btn active">
-            <?php p($l->t('Đăng nhập')); ?>
+            <?php p($l->t('Login')); ?>
         </span>
         <a href="<?php p(\OC::$server->getURLGenerator()->linkToRoute('sso_auth.register.index')); ?>"
            class="auth-toggle-btn">
-            <?php p($l->t('Đăng ký')); ?>
+            <?php p($l->t('Register')); ?>
         </a>
     </div>
 
@@ -26,13 +26,13 @@ style('sso_auth', 'auth');
         <input type="hidden" name="requesttoken" value="<?php p($_['requesttoken']) ?>">
 
         <div class="form-group">
-            <label for="ssoIdentifier"><?php p($l->t('Email hoặc Số điện thoại')); ?></label>
-            <input type="text" name="ssoIdentifier" id="ssoIdentifier" placeholder="<?php p($l->t('your@email.com hoặc 0912345678')); ?>"
+            <label for="ssoIdentifier"><?php p($l->t('Email or Phone number')); ?></label>
+            <input type="text" name="ssoIdentifier" id="ssoIdentifier" placeholder="<?php p($l->t('your@email.com or 0912345678')); ?>"
                 value="<?php p($_['email']) ?>" autocomplete="off" autocorrect="off" autofocus required />
         </div>
 
         <div class="form-group">
-            <label for="password"><?php p($l->t('Mật khẩu')); ?></label>
+            <label for="password"><?php p($l->t('Password')); ?></label>
             <div class="password-input-wrapper">
                 <input type="password" name="password" id="password" placeholder="<?php p($l->t('••••••••')); ?>"
                     value="" autocomplete="off" autocorrect="off" required />
@@ -47,7 +47,7 @@ style('sso_auth', 'auth');
 
         <div class="form-group">
             <button type="submit" id="sso-auth-login-submit">
-                <?php p($l->t('Đăng nhập')); ?>
+                <?php p($l->t('Login')); ?>
             </button>
         </div>
     </form>

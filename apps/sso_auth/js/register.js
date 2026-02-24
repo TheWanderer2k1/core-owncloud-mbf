@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", function () {
   var passwordToggle = document.getElementById("password-toggle");
   var passwordInput = document.getElementById("password");
   var confirmPasswordToggle = document.getElementById(
-    "confirm-password-toggle"
+    "confirm-password-toggle",
   );
   var confirmPasswordInput = document.getElementById("confirmPassword");
 
@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", function () {
       e.preventDefault();
       console.log(
         "Confirm password toggle clicked, current type:",
-        confirmPasswordInput.type
+        confirmPasswordInput.type,
       );
       if (confirmPasswordInput.type === "password") {
         confirmPasswordInput.type = "text";
@@ -97,22 +97,22 @@ document.addEventListener("DOMContentLoaded", function () {
     clearError("confirmPassword", "confirm-password-error");
   }
 
-  ["email", "phoneNumber", "password", "confirmPassword"].forEach(function (
-    fieldName
-  ) {
-    var input = document.querySelector("input[name='" + fieldName + "']");
-    if (input) {
-      input.addEventListener("input", function () {
-        var errorId =
-          fieldName === "phoneNumber"
-            ? "phone-error"
-            : fieldName === "confirmPassword"
-            ? "confirm-password-error"
-            : fieldName + "-error";
-        clearError(fieldName, errorId);
-      });
-    }
-  });
+  ["email", "phoneNumber", "password", "confirmPassword"].forEach(
+    function (fieldName) {
+      var input = document.querySelector("input[name='" + fieldName + "']");
+      if (input) {
+        input.addEventListener("input", function () {
+          var errorId =
+            fieldName === "phoneNumber"
+              ? "phone-error"
+              : fieldName === "confirmPassword"
+                ? "confirm-password-error"
+                : fieldName + "-error";
+          clearError(fieldName, errorId);
+        });
+      }
+    },
+  );
 
   form.addEventListener("submit", async function (event) {
     try {
@@ -125,24 +125,32 @@ document.addEventListener("DOMContentLoaded", function () {
         .value.trim();
       let password = form.querySelector("input[name='password']").value;
       let confirmPassword = form.querySelector(
-        "input[name='confirmPassword']"
+        "input[name='confirmPassword']",
       ).value;
 
       var hasError = false;
 
       if (!email) {
-        showError("email", "email-error", "Email required !");
+        showError("email", "email-error", t("sso_auth", "Email required !"));
         hasError = true;
       } else {
         var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-          showError("email", "email-error", "Email is not valid.");
+          showError(
+            "email",
+            "email-error",
+            t("sso_auth", "Email is not valid."),
+          );
           hasError = true;
         }
       }
 
       if (!phoneNumber) {
-        showError("phoneNumber", "phone-error", "Phone number is required !");
+        showError(
+          "phoneNumber",
+          "phone-error",
+          t("sso_auth", "Phone number is required !"),
+        );
         hasError = true;
       } else {
         var phoneNumberRegex = /^(?:\+84|0)(3|5|7|8|9)[0-9]{8}$/;
@@ -150,14 +158,18 @@ document.addEventListener("DOMContentLoaded", function () {
           showError(
             "phoneNumber",
             "phone-error",
-            "Phone number is not valid !"
+            t("sso_auth", "Phone number is not valid !"),
           );
           hasError = true;
         }
       }
 
       if (!password) {
-        showError("password", "password-error", "Password is required !");
+        showError(
+          "password",
+          "password-error",
+          t("sso_auth", "Password is required !"),
+        );
         hasError = true;
       } else {
         var passwordRegex = /^(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).{8,}$/;
@@ -165,7 +177,10 @@ document.addEventListener("DOMContentLoaded", function () {
           showError(
             "password",
             "password-error",
-            "Passwords must be at least 8 characters long and include uppercase letters and special characters !"
+            t(
+              "sso_auth",
+              "Passwords must be at least 8 characters long and include uppercase letters and special characters !",
+            ),
           );
           hasError = true;
         }
@@ -175,14 +190,14 @@ document.addEventListener("DOMContentLoaded", function () {
         showError(
           "confirmPassword",
           "confirm-password-error",
-          "Confirm password is required !"
+          t("sso_auth", "Confirm password is required !"),
         );
         hasError = true;
       } else if (password !== confirmPassword) {
         showError(
           "confirmPassword",
           "confirm-password-error",
-          "Confirm password is not match !"
+          t("sso_auth", "Confirm password is not match !"),
         );
         hasError = true;
       }
@@ -205,7 +220,7 @@ document.addEventListener("DOMContentLoaded", function () {
         generalError.style.background = "rgba(255, 107, 107, 0.1)";
       }
 
-      submitBtnSpan.textContent = "Registering...";
+      submitBtnSpan.textContent = t("sso_auth", "Registering...");
 
       try {
         const response = await fetch(form.action, {
@@ -229,7 +244,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (!response.ok || result.status === "error") {
           submitBtn.disabled = false;
-          let errorMsg = result.message || "Registration failed.";
+          let errorMsg =
+            result.message || t("sso_auth", "Registration failed.");
 
           if (generalError) {
             generalError.textContent = errorMsg;
@@ -241,7 +257,10 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         // Success handling
-        let successMsg = "Registration successful. You can now log in.";
+        let successMsg = t(
+          "sso_auth",
+          "Registration successful. You can now log in.",
+        );
         if (generalError) {
           generalError.style.borderColor = "#2ecc71";
           generalError.style.color = "#2ecc71";
@@ -261,8 +280,10 @@ document.addEventListener("DOMContentLoaded", function () {
         submitBtn.disabled = false;
         submitBtnSpan.textContent = originalBtnText;
         console.error("Error during registration:", error);
-        let unexpectedError =
-          "An unexpected error occurred. Please try again later.";
+        let unexpectedError = t(
+          "sso_auth",
+          "An unexpected error occurred. Please try again later.",
+        );
         if (generalError) {
           generalError.textContent = unexpectedError;
           generalError.style.display = "block";
