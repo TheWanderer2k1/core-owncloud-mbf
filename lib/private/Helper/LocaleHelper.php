@@ -29,24 +29,7 @@ class LocaleHelper {
 	 */
 	private $commonLanguages = [
 		'en',
-		'es',
-		'fr',
-		'de',
-		'de_DE',
-		'ja',
-		'ar',
-		'ru',
-		'nl',
-		'it',
-		'pt_BR',
-		'pt_PT',
-		'da',
-		'fi_FI',
-		'nb_NO',
-		'sv',
-		'tr',
-		'zh_CN',
-		'ko'
+		'vi',
 	];
 
 	/**
