@@ -60,7 +60,19 @@
         "%n packages": "%n gói",
         "Are you sure you want to delete %n package?": "Bạn có chắc chắn muốn xóa %n gói không?",
         "Are you sure you want to delete %n packages?": "Bạn có chắc chắn muốn xóa %n gói không?",
-        "Error loading packages": "Lỗi khi tải gói"
+        "Error loading packages": "Lỗi khi tải gói",
+        "History": "Lịch sử",
+        "Subscription History": "Lịch sử đăng ký",
+        "Search by user, package, action...": "Tìm theo người dùng, gói, hành động...",
+        "Search": "Tìm kiếm",
+        "Reset": "Đặt lại",
+        "User": "Người dùng",
+        "Action": "Hành động",
+        "Expiry date": "Ngày hết hạn",
+        "Date": "Ngày",
+        "Loading...": "Đang tải...",
+        "Previous": "Trước",
+        "Next": "Tiếp"
     },
     "pluralForm": "nplurals=1; plural=0;"
 }

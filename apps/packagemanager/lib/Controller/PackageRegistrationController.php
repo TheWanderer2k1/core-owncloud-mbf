@@ -325,7 +325,15 @@ class PackageRegistrationController extends Controller {
                 $ssoId,
                 $package->getId(),
                 'cancel',
-                "User $userId cancelled package " . $package->getCode()
+                "User $ssoId cancelled package " . $package->getCode(),
+                null,
+                $package->getName(),
+                $package->getCode(),
+                $package->getQuota(),
+                $package->getDuration(),
+                $package->getUnit(),
+                $package->getPrice(),
+                $subscriptionStatus->getEndAt()
             );
             $this->subscriptionHistoryMapper->insert($subscriptionHistory);
 
@@ -494,7 +502,16 @@ class PackageRegistrationController extends Controller {
                 $subscriptionStatus->getId(),
                 $userId,
                 $package->getId(),
-                $actionType
+                $actionType,
+                '',
+                null,
+                $package->getName(),
+                $package->getCode(),
+                $package->getQuota(),
+                $package->getDuration(),
+                $package->getUnit(),
+                $package->getPrice(),
+                $subscriptionStatus->getEndAt()
             );
             if ($actionType == 'subscribe') {
                 $subscriptionHistory->setDescription("User $userId subscribed new package " . $package->getCode());

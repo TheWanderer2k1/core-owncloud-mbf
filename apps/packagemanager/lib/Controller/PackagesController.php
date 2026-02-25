@@ -202,4 +202,78 @@ class PackagesController extends Controller {
 			], 500);
 		}
 	}
+
+	/**
+	 * @NoAdminRequired
+	 * Get subscription history with pagination and search
+	 */
+	public function history($page = 1, $limit = 20, $search = '') {
+		try {
+			$page = max(1, (int)$page);
+			$limit = max(1, min(100, (int)$limit));
+			$offset = ($page - 1) * $limit;
+
+			$qb = $this->db->getQueryBuilder();
+
+			// Count query
+			$countQb = $this->db->getQueryBuilder();
+			$countQb->select($countQb->createFunction('COUNT(*) as total'))
+				->from('packagemanager_subscription_history');
+
+			$dataQb = $this->db->getQueryBuilder();
+			$dataQb->select('*')
+				->from('packagemanager_subscription_history')
+				->orderBy('created_at', 'DESC')
+				->setMaxResults($limit)
+				->setFirstResult($offset);
+
+			if (!empty($search)) {
+				$searchParam = $dataQb->createNamedParameter('%' . $search . '%');
+				$searchParamCount = $countQb->createNamedParameter('%' . $search . '%');
+
+				$dataQb->where(
+					$dataQb->expr()->orX(
+						$dataQb->expr()->like('user_id', $searchParam),
+						$dataQb->expr()->like('package_name', $dataQb->createNamedParameter('%' . $search . '%')),
+						$dataQb->expr()->like('package_code', $dataQb->createNamedParameter('%' . $search . '%')),
+						$dataQb->expr()->like('action_type', $dataQb->createNamedParameter('%' . $search . '%'))
+					)
+				);
+
+				$countQb->where(
+					$countQb->expr()->orX(
+						$countQb->expr()->like('user_id', $searchParamCount),
+						$countQb->expr()->like('package_name', $countQb->createNamedParameter('%' . $search . '%')),
+						$countQb->expr()->like('package_code', $countQb->createNamedParameter('%' . $search . '%')),
+						$countQb->expr()->like('action_type', $countQb->createNamedParameter('%' . $search . '%'))
+					)
+				);
+			}
+
+			$countResult = $countQb->execute();
+			$totalRow = $countResult->fetch();
+			$countResult->closeCursor();
+			$total = (int)($totalRow['total'] ?? 0);
+
+			$dataResult = $dataQb->execute();
+			$rows = $dataResult->fetchAll();
+			$dataResult->closeCursor();
+
+			return new DataResponse([
+				'status' => 'success',
+				'data' => $rows,
+				'pagination' => [
+					'page' => $page,
+					'limit' => $limit,
+					'total' => $total,
+					'totalPages' => (int)ceil($total / $limit),
+				],
+			]);
+		} catch (\Exception $e) {
+			return new DataResponse([
+				'status' => 'error',
+				'message' => $e->getMessage()
+			], 500);
+		}
+	}
 }
