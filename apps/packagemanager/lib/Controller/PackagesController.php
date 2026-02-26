@@ -202,4 +202,80 @@ class PackagesController extends Controller {
 			], 500);
 		}
 	}
+
+	/**
+	 * @NoAdminRequired
+	 * Get subscription history with pagination and search
+	 */
+	public function history() {
+		try {
+			$page   = max(1, (int)$this->request->getParam('page', 1));
+			$limit  = max(1, min(100, (int)$this->request->getParam('limit', 10)));
+			$search = trim((string)$this->request->getParam('search', ''));
+			$offset = ($page - 1) * $limit;
+
+			$db = $this->db;
+
+			if (!empty($search)) {
+				$like = '%' . $search . '%';
+
+				// Count with search
+				$countSql = 'SELECT COUNT(*) as total FROM `*PREFIX*packagemanager_subscription_history`'
+					. ' WHERE `user_id` LIKE ?'
+					. ' OR `package_name` LIKE ?'
+					. ' OR `package_code` LIKE ?'
+					. ' OR `action_type` LIKE ?';
+				$countStmt = $db->prepare($countSql);
+				$countStmt->execute([$like, $like, $like, $like]);
+				$totalRow = $countStmt->fetch();
+				$countStmt->closeCursor();
+
+				// Data with search + pagination
+				$dataSql = 'SELECT * FROM `*PREFIX*packagemanager_subscription_history`'
+					. ' WHERE `user_id` LIKE ?'
+					. ' OR `package_name` LIKE ?'
+					. ' OR `package_code` LIKE ?'
+					. ' OR `action_type` LIKE ?'
+					. ' ORDER BY `created_at` DESC'
+					. ' LIMIT ? OFFSET ?';
+				$dataStmt = $db->prepare($dataSql);
+				$dataStmt->execute([$like, $like, $like, $like, $limit, $offset]);
+			} else {
+				// Count all
+				$countSql = 'SELECT COUNT(*) as total FROM `*PREFIX*packagemanager_subscription_history`';
+				$countStmt = $db->prepare($countSql);
+				$countStmt->execute();
+				$totalRow = $countStmt->fetch();
+				$countStmt->closeCursor();
+
+				// Data with pagination only
+				$dataSql = 'SELECT * FROM `*PREFIX*packagemanager_subscription_history`'
+					. ' ORDER BY `created_at` DESC'
+					. ' LIMIT ? OFFSET ?';
+				$dataStmt = $db->prepare($dataSql);
+				$dataStmt->execute([$limit, $offset]);
+			}
+
+			$total = (int)($totalRow['total'] ?? 0);
+			$rows  = $dataStmt->fetchAll();
+			$dataStmt->closeCursor();
+
+			return new DataResponse([
+				'status' => 'success',
+				'data'   => $rows,
+				'pagination' => [
+					'page'       => $page,
+					'limit'      => $limit,
+					'total'      => $total,
+					'totalPages' => (int)ceil($total / max(1, $limit)),
+				],
+			]);
+		} catch (\Exception $e) {
+			return new DataResponse([
+				'status'  => 'error',
+				'message' => $e->getMessage()
+			], 500);
+		}
+	}
 }
+

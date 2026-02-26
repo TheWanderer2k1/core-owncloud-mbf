@@ -16,13 +16,14 @@
   top: 0;
   justify-content: space-between;
   padding: 35px 0;
+  left: 0 !important;
 }
 
 #controls .actions {
   margin-right: 10px;
 }
 
-#controls .actions.creatable{
+#controls .actions.creatable {
   display: flex;
   justify-content: space-between;
 }
@@ -51,10 +52,9 @@
   display: none;
 }
 
-.selectedActions .icon-delete:hover{
+.selectedActions .icon-delete:hover {
   background-image: url(../img/delete.svg);
 }
-
 
 .icon {
   display: inline-block;
@@ -92,7 +92,6 @@
   height: 50px;
   box-sizing: border-box;
   text-decoration: none;
-  color: #999;
 }
 
 .column-name .columntitle {
@@ -240,21 +239,11 @@ table.multiselect thead th {
 #app-navigation li a {
   display: flex;
   align-items: center;
-  padding: 10px 20px;
-  color: #333;
   text-decoration: none;
 }
 
 #app-navigation li a .icon {
   margin-right: 15px;
-}
-
-/* Package List Specifics */
-.column-code,
-.column-price,
-.column-duration,
-.column-unit {
-  color: #777;
 }
 
 .column-actions {
@@ -277,4 +266,107 @@ table.multiselect thead th {
 /* Hidden elements */
 .hidden {
   display: none !important;
+}
+
+/* ── History Module ─────────────────────────────────────────────────────── */
+
+#history-section {
+  margin-top: 10px;
+}
+#history-table{
+  width: 100%;
+}
+
+#history-table thead th.history-col {
+  padding: 0 12px;
+  height: 44px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.4px;
+  background: #fafafa;
+}
+
+#history-table tbody tr {
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
+  transition: background 0.12s;
+}
+
+#history-table tbody tr:hover {
+  background: #f5f7fa;
+}
+
+td.history-cell {
+  padding: 17px 12px;
+  vertical-align: middle;
+  font-size: 13px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+td.history-mono {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+}
+
+td.history-date {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Action type badges */
+.history-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  background: #e0e0e0;
+  color: #555;
+}
+
+.badge-subscribe {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.badge-extend {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.badge-change {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.badge-cancel {
+  background: #fce4ec;
+  color: #c62828;
+}
+
+.badge-expired {
+  background: #f3e5f5;
+  color: #6a1b9a;
+}
+
+/* Search input inside history controls */
+#history-search {
+  padding: 7px 10px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  font-size: 13px;
+  height: 34px;
+  box-sizing: border-box;
+}
+
+#history-search:focus {
+  border-color: #0082c9;
+  outline: none;
 }

@@ -11,7 +11,8 @@ return [
 
 		// Page routes
 		['name' => 'page#index', 'url' => '/', 'verb' => 'GET'],
-		
+		['name' => 'page#history', 'url' => '/history', 'verb' => 'GET'],
+
 		// API routes for packages
 		['name' => 'packages#index', 'url' => '/api/packages', 'verb' => 'GET'],
 		['name' => 'packages#create', 'url' => '/api/packages', 'verb' => 'POST'],
@@ -20,5 +21,8 @@ return [
 
 		// API package registration
 		['name' => 'package_registration#register', 'url' => '/api/internal/register', 'verb' => 'POST'],
+
+		// API subscription history
+		['name' => 'packages#history', 'url' => '/api/history', 'verb' => 'GET'],
 	]
 ];
