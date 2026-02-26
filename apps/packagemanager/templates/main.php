@@ -17,7 +17,7 @@ $l = $_['l'];
 	<ul>
 		<li class="active">
 			<a href="<?php p(\OCP\Util::linkToRoute('packagemanager.page.index')); ?>">
-				<span class="icon icon-files"></span><?php p($l->t('All package')); ?>
+				<span class="icon icon-settings-dark"></span><?php p($l->t('All package')); ?>
 			</a>
 		</li>
 		<li>

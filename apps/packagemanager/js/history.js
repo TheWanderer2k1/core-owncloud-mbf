@@ -9,7 +9,7 @@
     historyUrl: OC.generateUrl("/apps/packagemanager/api/history"),
     currentPage: 1,
     currentSearch: "",
-    limit: 20,
+    limit: 10,
 
     init: function () {
       var self = this;
@@ -119,9 +119,22 @@
 
           var expiryDate = "-";
           if (row.package_expiry_date && row.package_expiry_date > 0) {
-            expiryDate = new Date(
-              row.package_expiry_date * 1000,
-            ).toLocaleDateString("vi-VN");
+            var d = new Date(row.package_expiry_date * 1000);
+            var pad = function (n) {
+              return String(n).padStart(2, "0");
+            };
+            expiryDate =
+              d.getFullYear() +
+              "-" +
+              pad(d.getMonth() + 1) +
+              "-" +
+              pad(d.getDate()) +
+              " " +
+              pad(d.getHours()) +
+              ":" +
+              pad(d.getMinutes()) +
+              ":" +
+              pad(d.getSeconds());
           }
 
           var createdAt = "-";
@@ -163,7 +176,7 @@
               '<td class="history-cell">' +
               escapeHtml(expiryDate) +
               "</td>" +
-              '<td class="history-cell history-date">' +
+              '<td class="history-cell">' +
               escapeHtml(createdAt) +
               "</td>" +
               "</tr>",

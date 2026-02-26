@@ -207,73 +207,75 @@ class PackagesController extends Controller {
 	 * @NoAdminRequired
 	 * Get subscription history with pagination and search
 	 */
-	public function history($page = 1, $limit = 20, $search = '') {
+	public function history() {
 		try {
-			$page = max(1, (int)$page);
-			$limit = max(1, min(100, (int)$limit));
+			$page   = max(1, (int)$this->request->getParam('page', 1));
+			$limit  = max(1, min(100, (int)$this->request->getParam('limit', 10)));
+			$search = trim((string)$this->request->getParam('search', ''));
 			$offset = ($page - 1) * $limit;
 
-			$qb = $this->db->getQueryBuilder();
-
-			// Count query
-			$countQb = $this->db->getQueryBuilder();
-			$countQb->select($countQb->createFunction('COUNT(*) as total'))
-				->from('packagemanager_subscription_history');
-
-			$dataQb = $this->db->getQueryBuilder();
-			$dataQb->select('*')
-				->from('packagemanager_subscription_history')
-				->orderBy('created_at', 'DESC')
-				->setMaxResults($limit)
-				->setFirstResult($offset);
+			$db = $this->db;
 
 			if (!empty($search)) {
-				$searchParam = $dataQb->createNamedParameter('%' . $search . '%');
-				$searchParamCount = $countQb->createNamedParameter('%' . $search . '%');
+				$like = '%' . $search . '%';
 
-				$dataQb->where(
-					$dataQb->expr()->orX(
-						$dataQb->expr()->like('user_id', $searchParam),
-						$dataQb->expr()->like('package_name', $dataQb->createNamedParameter('%' . $search . '%')),
-						$dataQb->expr()->like('package_code', $dataQb->createNamedParameter('%' . $search . '%')),
-						$dataQb->expr()->like('action_type', $dataQb->createNamedParameter('%' . $search . '%'))
-					)
-				);
+				// Count with search
+				$countSql = 'SELECT COUNT(*) as total FROM `*PREFIX*packagemanager_subscription_history`'
+					. ' WHERE `user_id` LIKE ?'
+					. ' OR `package_name` LIKE ?'
+					. ' OR `package_code` LIKE ?'
+					. ' OR `action_type` LIKE ?';
+				$countStmt = $db->prepare($countSql);
+				$countStmt->execute([$like, $like, $like, $like]);
+				$totalRow = $countStmt->fetch();
+				$countStmt->closeCursor();
 
-				$countQb->where(
-					$countQb->expr()->orX(
-						$countQb->expr()->like('user_id', $searchParamCount),
-						$countQb->expr()->like('package_name', $countQb->createNamedParameter('%' . $search . '%')),
-						$countQb->expr()->like('package_code', $countQb->createNamedParameter('%' . $search . '%')),
-						$countQb->expr()->like('action_type', $countQb->createNamedParameter('%' . $search . '%'))
-					)
-				);
+				// Data with search + pagination
+				$dataSql = 'SELECT * FROM `*PREFIX*packagemanager_subscription_history`'
+					. ' WHERE `user_id` LIKE ?'
+					. ' OR `package_name` LIKE ?'
+					. ' OR `package_code` LIKE ?'
+					. ' OR `action_type` LIKE ?'
+					. ' ORDER BY `created_at` DESC'
+					. ' LIMIT ? OFFSET ?';
+				$dataStmt = $db->prepare($dataSql);
+				$dataStmt->execute([$like, $like, $like, $like, $limit, $offset]);
+			} else {
+				// Count all
+				$countSql = 'SELECT COUNT(*) as total FROM `*PREFIX*packagemanager_subscription_history`';
+				$countStmt = $db->prepare($countSql);
+				$countStmt->execute();
+				$totalRow = $countStmt->fetch();
+				$countStmt->closeCursor();
+
+				// Data with pagination only
+				$dataSql = 'SELECT * FROM `*PREFIX*packagemanager_subscription_history`'
+					. ' ORDER BY `created_at` DESC'
+					. ' LIMIT ? OFFSET ?';
+				$dataStmt = $db->prepare($dataSql);
+				$dataStmt->execute([$limit, $offset]);
 			}
 
-			$countResult = $countQb->execute();
-			$totalRow = $countResult->fetch();
-			$countResult->closeCursor();
 			$total = (int)($totalRow['total'] ?? 0);
-
-			$dataResult = $dataQb->execute();
-			$rows = $dataResult->fetchAll();
-			$dataResult->closeCursor();
+			$rows  = $dataStmt->fetchAll();
+			$dataStmt->closeCursor();
 
 			return new DataResponse([
 				'status' => 'success',
-				'data' => $rows,
+				'data'   => $rows,
 				'pagination' => [
-					'page' => $page,
-					'limit' => $limit,
-					'total' => $total,
-					'totalPages' => (int)ceil($total / $limit),
+					'page'       => $page,
+					'limit'      => $limit,
+					'total'      => $total,
+					'totalPages' => (int)ceil($total / max(1, $limit)),
 				],
 			]);
 		} catch (\Exception $e) {
 			return new DataResponse([
-				'status' => 'error',
+				'status'  => 'error',
 				'message' => $e->getMessage()
 			], 500);
 		}
 	}
 }
+

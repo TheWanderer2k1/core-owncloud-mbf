@@ -16,6 +16,7 @@
   top: 0;
   justify-content: space-between;
   padding: 35px 0;
+  left: 0 !important;
 }
 
 #controls .actions {
@@ -91,7 +92,6 @@
   height: 50px;
   box-sizing: border-box;
   text-decoration: none;
-  color: #999;
 }
 
 .column-name .columntitle {
@@ -239,21 +239,11 @@ table.multiselect thead th {
 #app-navigation li a {
   display: flex;
   align-items: center;
-  padding: 10px 20px;
-  color: #333;
   text-decoration: none;
 }
 
 #app-navigation li a .icon {
   margin-right: 15px;
-}
-
-/* Package List Specifics */
-.column-code,
-.column-price,
-.column-duration,
-.column-unit {
-  color: #777;
 }
 
 .column-actions {
@@ -292,7 +282,6 @@ table.multiselect thead th {
   height: 44px;
   text-align: left;
   border-bottom: 1px solid #e0e0e0;
-  color: #888;
   font-weight: 600;
   font-size: 12px;
   letter-spacing: 0.4px;
@@ -310,10 +299,9 @@ table.multiselect thead th {
 }
 
 td.history-cell {
-  padding: 10px 12px;
+  padding: 17px 12px;
   vertical-align: middle;
   font-size: 13px;
-  color: #444;
   max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -323,11 +311,9 @@ td.history-cell {
 td.history-mono {
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 12px;
-  color: #555;
 }
 
 td.history-date {
-  color: #999;
   font-size: 12px;
   white-space: nowrap;
 }
