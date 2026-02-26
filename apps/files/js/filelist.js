@@ -2332,7 +2332,13 @@
 			var self = this;
 			var tr, td, input, form;
 			tr = this.findFileEl(oldName);
-			var oldFileInfo = this.files[tr.index()];
+			// Look up file info by id instead of DOM index, because
+			// group-header rows (e.g. in Recent view) shift tr.index().
+			var fileId = parseInt(tr.attr('data-id'), 10);
+			var oldFileInfo = _.find(this.files, function(f) { return f.id === fileId; });
+			if (!oldFileInfo) {
+				oldFileInfo = this.files[tr.index()];
+			}
 			tr.data('renaming',true);
 			td = tr.children('td.filename');
 			input = $('<input type="text" class="filename"/>').val(oldName);
@@ -2460,7 +2466,10 @@
 							});
 					} else {
 						// add back the old file info when cancelled
-						self.files.splice(tr.index(), 1);
+						var cancelIdx = _.findIndex(self.files, function(f) { return f.id === fileId; });
+						if (cancelIdx >= 0) {
+							self.files.splice(cancelIdx, 1);
+						}
 						tr.remove();
 						tr = self.add(oldFileInfo, {updateSummary: false, silent: true});
 						self.$fileList.trigger($.Event('fileActionsReady', {fileList: self, $files: $(tr)}));

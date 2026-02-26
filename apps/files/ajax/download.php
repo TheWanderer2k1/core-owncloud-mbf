@@ -70,4 +70,26 @@ if (isset($_SERVER['HTTP_RANGE'])) {
 	$server_params['range'] = \OC::$server->getRequest()->getHeader('Range') ?? '';
 }
 
+// Track download activity in oc_recent_files
+try {
+	$recentService = new \OCA\Files\Service\RecentActivityService(
+		\OC::$server->getDatabaseConnection(),
+		\OC::$server->getUserSession()
+	);
+	$uid = \OC::$server->getUserSession()->getUser()->getUID();
+	// Normalize dir: strip trailing slash, ensure leading slash
+	$cleanDir = '/' . trim($dir, '/');
+	foreach ($files_list as $filename) {
+		// Build internal filecache path: "files/dir/filename" with no double slashes
+		$fullPath = 'files' . $cleanDir . '/' . ltrim($filename, '/');
+		$fullPath = preg_replace('#/+#', '/', $fullPath); // collapse double slashes
+		$fileId = $recentService->resolveFileId($uid, $fullPath);
+		if ($fileId > 0) {
+			$recentService->record($uid, $fileId, 'download');
+		}
+	}
+} catch (\Exception $e) {
+	// never block download due to tracking error
+}
+
 OC_Files::get($dir, $files_list, $server_params);

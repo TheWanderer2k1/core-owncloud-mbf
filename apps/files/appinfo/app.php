@@ -64,3 +64,6 @@ $templateManager->registerTemplate('application/vnd.oasis.opendocument.graphics'
 });
 
 \OCP\Util::connectHook('\OCP\Config', 'js', '\OCA\Files\App', 'extendJsConfig');
+
+// Register Recent file activity hooks
+\OCA\Files\Hooks\RecentFileHooks::connectHooks();

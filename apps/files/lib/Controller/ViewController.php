@@ -177,6 +177,10 @@ class ViewController extends Controller {
 		\OCP\Util::addScript('files', 'favoritesplugin');
 		\OCP\Util::addScript('files', 'filelockplugin');
 
+		\OCP\Util::addScript('files', 'recentfilelist');
+		\OCP\Util::addScript('files', 'recentplugin');
+		\OCP\Util::addScript('files', 'recenttracker');
+
 		\OCP\Util::addScript('files', 'detailfileinfoview');
 		\OCP\Util::addScript('files', 'detailtabview');
 		\OCP\Util::addScript('files', 'mainfileinfodetailview');
