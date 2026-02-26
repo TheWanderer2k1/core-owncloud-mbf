@@ -145,6 +145,15 @@
      "No favorites" : "Không có mục yêu thích",
      "Files and folders you mark as favorite will show up here" : "Các tệp và thư mục bạn đánh dấu yêu thích sẽ hiển thị ở đây",
      "Text file" : "Tệp văn bản",
-     "New text file.txt" : "Tệp văn bản mới.txt"
+     "New text file.txt" : "Tệp văn bản mới.txt",
+     "Recent" : "Gần đây",
+     "Today" : "Hôm nay",
+     "Yesterday" : "Hôm qua",
+     "This week" : "Tuần này",
+     "This month" : "Tháng này",
+     "This year" : "Năm nay",
+     "Older" : "Cũ hơn",
+     "No recently modified files" : "Không có tệp nào được thao tác gần đây",
+     "Files you recently modified will show up here" : "Các tệp bạn thao tác gần đây sẽ hiển thị ở đây"
  },"pluralForm" :"nplurals=1; plural=0;"
  }

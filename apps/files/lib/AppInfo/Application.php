@@ -25,6 +25,7 @@
 namespace OCA\Files\AppInfo;
 
 use OCA\Files\Controller\ApiController;
+use OCA\Files\Controller\RecentController;
 use OCA\Files\Controller\ViewController;
 use OCA\Files\Service\TagService;
 use OCP\AppFramework\App;
@@ -48,6 +49,15 @@ class Application extends App {
 				$server->getPreviewManager(),
 				$server->getShareManager(),
 				$server->getConfig()
+			);
+		});
+
+		$container->registerService('RecentController', function (IContainer $c) use ($server) {
+			return new RecentController(
+				$c->query('AppName'),
+				$c->query('Request'),
+				$server->getUserSession(),
+				$server->getDatabaseConnection()
 			);
 		});
 
