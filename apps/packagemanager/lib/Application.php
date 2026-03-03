@@ -88,5 +88,16 @@ class Application extends App {
 				$c->query('DatabaseConnection')
 			);
 		});
+
+		// add background job here ?
+		$container->registerService('AutoCancelExpiredPackage', function(IContainer $c) {
+			return new \OCA\PackageManager\BackgroundJob\AutoCancelExpiredPackage(
+				$c->query('CustomLogService'),
+				$c->query('ServerContainer')->getUserManager(),
+				$c->query('SubscriptionStatusMapper'),
+				$c->query('SubscriptionHistoryMapper')
+			);
+		});
+		$container->query('ServerContainer')->getJobList()->add($container->query('AutoCancelExpiredPackage'));
 	}
 }

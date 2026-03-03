@@ -20,4 +20,8 @@
 		<section>OCA\PackageManager\Settings\Section</section>
 		<admin>OCA\PackageManager\Settings\Admin</admin>
 	</settings>
+
+	<background-jobs>
+		<job>OCA\PackageManager\BackgroundJob\AutoCancelExpiredPackage</job>
+	</background-jobs>
 </info>
