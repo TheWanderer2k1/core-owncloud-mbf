@@ -29,27 +29,27 @@ class AutoCancelExpiredPackage extends Job {
     public function run($argument) {
         try {
             $expiredSubscriptions = $this->subscriptionStatusMapper->findExpiredSubscriptions();
-            foreach ($expiredSubscriptions as $subscription) {
-                $this->logger->debug("Found expired subscription for user: " . $subscription->getUserId());
+            foreach ($expiredSubscriptions as $expiredSubscription) {
+                $this->logger->debug("Found expired subscription for user: " . $expiredSubscription->getUserId());
                 // Cancel the subscription and log the event
-                $subscription->setStatus('expired');
-                $this->subscriptionStatusMapper->update($subscription);
+                $expiredSubscription->setStatus('expired');
+                $this->subscriptionStatusMapper->update($expiredSubscription);
                 // Create a history entry for the cancellation
                 $history = new SubscriptionHistory(
-                    $subscription->getId(),
-                    $subscription->getUserId(),
-                    $subscription->getPackageId(),
+                    $expiredSubscription->getId(),
+                    $expiredSubscription->getUserId(),
+                    $expiredSubscription->getPackageId(),
                     'auto_expired',
-                    "System cancelled user " . $subscription->getUserId() . "'s subscribed package " . $subscription->getPackageId() . " due to expiration"
+                    "System cancelled user " . $expiredSubscription->getUserId() . "'s subscribed package " . $expiredSubscription->getPackageId() . " due to expiration"
                 );
                 $this->subscriptionHistoryMapper->insert($history);
                 // Deactivate user's account
-                $user = $this->userManager->get($subscription->getUserId());
+                $user = $this->userManager->get($expiredSubscription->getUserId());
                 if ($user) {
                     $user->setEnabled(false);
-                    $this->logger->debug("Deactivated user account: " . $subscription->getUserId());
+                    $this->logger->debug("Deactivated user account: " . $expiredSubscription->getUserId());
                 } else {
-                    $this->logger->error("User not found for subscription: " . $subscription->getUserId());
+                    $this->logger->error("User not found for subscription: " . $expiredSubscription->getUserId());
                 }
             }
         } catch (\Exception $e) {
