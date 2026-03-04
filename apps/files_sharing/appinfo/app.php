@@ -103,3 +103,15 @@ if (\class_exists('OCA\Files\App') && $config->getAppValue('core', 'shareapi_ena
 		}
 	}
 }
+
+// Register "Recent" navigation item
+\OCA\Files\App::getNavigationManager()->add(function () {
+	$l = \OC::$server->getL10N('files');
+	return [
+		'id' => 'recent',
+		'appname' => 'files',
+		'script' => 'list.php',
+		'order' => 25,
+		'name' => $l->t('Recent'),
+	];
+});

@@ -997,3 +997,47 @@ html.ie8 #controls .button.new {
 	right: initial;
 	left: 15px !important;
 }
+
+/* Recent view - navigation icon */
+#app-navigation .nav-recent > a.nav-icon-recent {
+	background-image: url('../img/recent.svg');
+}
+
+/* Recent view - empty content icon */
+#app-content-recent #emptycontent .icon-recent {
+	background-image: url('../img/recent.svg');
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: 64px;
+	width: 64px;
+	height: 64px;
+	margin: 0 auto 10px;
+	display: block;
+	opacity: 0.4;
+}
+
+/* Recent view - time group separator rows */
+#app-content-recent tr.recent-group-header {
+	background: transparent;
+	border: none;
+	pointer-events: none;
+}
+
+#app-content-recent tr.recent-group-header td {
+	padding: 16px 0 4px 14px;
+	border: none;
+	background: transparent;
+}
+
+#app-content-recent tr.recent-group-header:first-child td {
+	padding-top: 8px;
+}
+
+#app-content-recent .recent-group-label {
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--color-text-lighter, #999);
+}
+

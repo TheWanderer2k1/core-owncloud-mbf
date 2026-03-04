@@ -1,8 +1,32 @@
-{ "translations": {
-    "Tags" : "Thẻ",
-    "No entries found in this folder" : "Chưa có mục nào trong thư mục",
-    "Name" : "Tên",
-    "Size" : "Kích cỡ",
-    "Modified" : "Thay đổi"
-},"pluralForm" :"nplurals=1; plural=0;"
-}
+ { "translations": {
+     "Tags" : "Thẻ",
+     "Tagged files" : "Tệp được gắn thẻ",
+     "Select tags to filter by" : "Chọn thẻ để lọc",
+     "Please select tags to filter by" : "Vui lòng chọn thẻ để lọc",
+     "No files found for the selected tags" : "Không tìm thấy tệp nào cho các thẻ đã chọn",
+     "<strong>System tags</strong> for a file have been modified" : "<strong>Thẻ hệ thống</strong> cho tệp đã được sửa đổi",
+     "System tag %3$s was assigned to %2$s due to automation rule" : "Thẻ hệ thống %3$s đã được gán cho %2$s do quy tắc tự động",
+     "You assigned system tag %3$s" : "Bạn đã gán thẻ hệ thống %3$s",
+     "%1$s assigned system tag %3$s" : "%1$s đã gán thẻ hệ thống %3$s",
+     "You unassigned system tag %3$s" : "Bạn đã bỏ gán thẻ hệ thống %3$s",
+     "%1$s unassigned system tag %3$s" : "%1$s đã bỏ gán thẻ hệ thống %3$s",
+     "You created system tag %2$s" : "Bạn đã tạo thẻ hệ thống %2$s",
+     "%1$s created system tag %2$s" : "%1$s đã tạo thẻ hệ thống %2$s",
+     "You deleted system tag %2$s" : "Bạn đã xóa thẻ hệ thống %2$s",
+     "%1$s deleted system tag %2$s" : "%1$s đã xóa thẻ hệ thống %2$s",
+     "You updated system tag %3$s to %2$s" : "Bạn đã cập nhật thẻ hệ thống %3$s thành %2$s",
+     "%1$s updated system tag %3$s to %2$s" : "%1$s đã cập nhật thẻ hệ thống %3$s thành %2$s",
+     "You assigned system tag %3$s to %2$s" : "Bạn đã gán thẻ hệ thống %3$s cho %2$s",
+     "%1$s assigned system tag %3$s to %2$s" : "%1$s đã gán thẻ hệ thống %3$s cho %2$s",
+     "You unassigned system tag %3$s from %2$s" : "Bạn đã bỏ gán thẻ hệ thống %3$s khỏi %2$s",
+     "%1$s unassigned system tag %3$s from %2$s" : "%1$s đã bỏ gán thẻ hệ thống %3$s khỏi %2$s",
+     "%s (restricted)" : "%s (bị hạn chế)",
+     "%s (invisible)" : "%s (ẩn)",
+     "%s (static)" : "%s (tĩnh)",
+     "No files in here" : "Không có tệp nào ở đây",
+     "No entries found in this folder" : "Không tìm thấy mục nào trong thư mục",
+     "Name" : "Tên",
+     "Size" : "Kích thước",
+     "Modified" : "Đã sửa đổi"
+ },"pluralForm" :"nplurals=1; plural=0;"
+ }

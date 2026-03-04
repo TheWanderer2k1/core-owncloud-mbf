@@ -78,5 +78,8 @@ class Application extends App {
         $userManager->registerBackend(
             $container->query(UserBackend::class)
         );
+
+        // Inject custom JS to override login text
+        \OCP\Util::addScript('sso_auth', 'override-login');
     }
 }

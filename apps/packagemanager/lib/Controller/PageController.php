@@ -26,4 +26,11 @@ class PageController extends Controller {
 	public function index() {
 		return new TemplateResponse('packagemanager', 'main', ['l' => $this->l10n]);
 	}
+
+	/**
+	 * @NoCSRFRequired
+	 */
+	public function history() {
+		return new TemplateResponse('packagemanager', 'history', ['l' => $this->l10n]);
+	}
 }

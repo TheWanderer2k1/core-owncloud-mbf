@@ -16,7 +16,14 @@ $l = $_['l'];
 <div id="app-navigation">
 	<ul>
 		<li class="active">
-			<a href="#"><span class="icon icon-files"></span><?php p($l->t('All package')); ?></a>
+			<a href="<?php p(\OCP\Util::linkToRoute('packagemanager.page.index')); ?>">
+				<span class="icon icon-settings-dark"></span><?php p($l->t('All package')); ?>
+			</a>
+		</li>
+		<li>
+			<a href="<?php p(\OCP\Util::linkToRoute('packagemanager.page.history')); ?>">
+				<span class="icon icon-history"></span><?php p($l->t('History')); ?>
+			</a>
 		</li>
 	</ul>
 </div>

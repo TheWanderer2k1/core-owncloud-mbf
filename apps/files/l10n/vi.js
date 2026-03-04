@@ -68,6 +68,15 @@ OC.L10N.register(
     "Select all" : "Chọn tất cả",
     "Upload too large" : "Tập tin tải lên quá lớn",
     "The files you are trying to upload exceed the maximum size for file uploads on this server." : "Các tập tin bạn đang tải lên vượt quá kích thước tối đa cho phép trên máy chủ .",
-    "Text file" : "Tập tin văn bản"
+    "Text file" : "Tập tin văn bản",
+    "Recent" : "Gần đây",
+    "Today" : "Hôm nay",
+    "Yesterday" : "Hôm qua",
+    "This week" : "Tuần này",
+    "This month" : "Tháng này",
+    "This year" : "Năm nay",
+    "Older" : "Cũ hơn",
+    "No recently modified files" : "Không có tệp nào được thao tác gần đây",
+    "Files you recently modified will show up here" : "Các tệp bạn thao tác gần đây sẽ hiển thị ở đây"
 },
 "nplurals=1; plural=0;");

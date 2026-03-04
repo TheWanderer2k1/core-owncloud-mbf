@@ -11,12 +11,14 @@ class UserBackend extends Database {
     private $centralAuthService;
     private $logger;
     private $userManager;
+    private $l;
 
-    public function __construct(CentralAuthService $centralAuthService, ILogger $logger, \OCP\IUserManager $userManager) {
+    public function __construct(CentralAuthService $centralAuthService, ILogger $logger, \OCP\IUserManager $userManager, \OCP\IL10N $l = null) {
         parent::__construct();
         $this->centralAuthService = $centralAuthService;
         $this->logger = $logger;
         $this->userManager = $userManager;
+        $this->l = $l ?: \OC::$server->getL10N('sso_auth');
     }
 
     /**
@@ -52,7 +54,7 @@ class UserBackend extends Database {
      * @return string the name of the backend to be shown
      */
     public function getBackendName() {
-        return 'SSO Authentication';
+        return $this->l->t('SSO Authentication');
     }
     /**
      * set password

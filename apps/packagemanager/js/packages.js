@@ -69,9 +69,12 @@
         if (selectedIds.length > 0) {
           if (
             confirm(
-              "Are you sure you want to delete " +
-                selectedIds.length +
-                " packages?"
+              n(
+                "packagemanager",
+                "Are you sure you want to delete %n package?",
+                "Are you sure you want to delete %n packages?",
+                selectedIds.length,
+              ),
             )
           ) {
             self.deleteMultiplePackages(selectedIds);
@@ -145,12 +148,16 @@
             self.renderPackages(response.data);
           } else {
             OC.Notification.showTemporary(
-              "Error loading packages: " + response.message
+              t("packagemanager", "Error loading packages") +
+                ": " +
+                response.message,
             );
           }
         },
         error: function () {
-          OC.Notification.showTemporary("Error loading packages");
+          OC.Notification.showTemporary(
+            t("packagemanager", "Error loading packages"),
+          );
         },
       });
     },
@@ -162,7 +169,7 @@
 
       if (packages.length === 0) {
         $tbody.append(
-          '<tr class="no-packages"><td colspan="6" style="text-align: center; padding: 40px; color: #999;">No packages found. Create your first package!</td></tr>'
+          '<tr class="no-packages"><td colspan="6" style="text-align: center; padding: 40px; color: #999;">No packages found. Create your first package!</td></tr>',
         );
         return;
       }
@@ -173,38 +180,40 @@
         var $nameContainer = $('<div class="nametext">');
         $nameContainer.append('<input type="checkbox" class="checkbox"> ');
         $nameContainer.append(
-          '<span class="innernametext">' + escapeHtml(pkg.name) + "</span>"
+          '<span class="innernametext">' + escapeHtml(pkg.name) + "</span>",
         );
 
         var $actions = $('<div class="fileactions">');
         $actions.append(
           '<a href="#" class="edit-package" data-id="' +
             pkg.id +
-            '" title="Edit"><span class="icon icon-rename"></span></a>'
+            '" title="Edit"><span class="icon icon-rename"></span></a>',
         );
         $actions.append(
           '<a href="#" class="delete-package" data-id="' +
             pkg.id +
             '" data-name="' +
             escapeHtml(pkg.name) +
-            '" title="Delete"><span class="icon icon-delete"></span></a>'
+            '" title="Delete"><span class="icon icon-delete"></span></a>',
         );
 
         $nameCol.append($nameContainer);
 
         $row.append($nameCol);
         $row.append(
-          '<td class="column-code">' + escapeHtml(pkg.code) + "</td>"
+          '<td class="column-code">' + escapeHtml(pkg.code) + "</td>",
         );
         $row.append(
           '<td class="column-price">' +
             parseFloat(pkg.price).toFixed(2) +
-            "</td>"
+            "</td>",
         );
-        $row.append('<td class="column-quota">' + escapeHtml(pkg.quota) + "</td>");
+        $row.append(
+          '<td class="column-quota">' + escapeHtml(pkg.quota) + "</td>",
+        );
         $row.append('<td class="column-duration">' + pkg.duration + "</td>");
         $row.append(
-          '<td class="column-unit">' + escapeHtml(pkg.unit) + "</td>"
+          '<td class="column-unit">' + escapeHtml(pkg.unit) + "</td>",
         );
 
         var $actionsCol = $('<td class="column-actions">');
@@ -226,19 +235,26 @@
       var $filestable = $("#filestable");
 
       if (count > 0) {
-        $headerName.text(count + " packages selected");
+        $headerName.text(
+          n(
+            "packagemanager",
+            "%n package selected",
+            "%n packages selected",
+            count,
+          ),
+        );
         $selectedActions.removeClass("hidden");
         $filestable.addClass("multiselect");
         $("#modified span:first-child").text("");
       } else {
-        $headerName.text("Package name");
+        $headerName.text(t("packagemanager", "Package name"));
         $selectedActions.addClass("hidden");
         $filestable.removeClass("multiselect");
-        $("#modified span:first-child").text("Unit");
+        $("#modified span:first-child").text(t("packagemanager", "Unit"));
       }
 
       var $summary = $(".summary .info");
-      $summary.text(total + " Packages");
+      $summary.text(n("packagemanager", "%n package", "%n packages", total));
     },
 
     createPackageFromModal: function ($dialog) {
@@ -345,7 +361,7 @@
             '<a href="#" class="save-package" title="Save"><span class="icon icon-checkmark"></span></a> ' +
             '<a href="#" class="cancel-edit" title="Cancel"><span class="icon icon-close"></span></a>' +
             "</div>" +
-            "</td>"
+            "</td>",
         );
       $row.find(".edit-name").focus();
     },
@@ -416,7 +432,7 @@
         function () {
           OC.Notification.showTemporary("Some packages could not be deleted");
           self.loadPackages();
-        }
+        },
       );
     },
   };

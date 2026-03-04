@@ -55,6 +55,16 @@ $application->registerRoutes(
 				'verb' => 'POST'
 			],
 			[
+				'name' => 'Recent#getRecentFiles',
+				'url' => '/api/v1/recent',
+				'verb' => 'GET'
+			],
+			[
+				'name' => 'Recent#trackActivity',
+				'url' => '/api/v1/recent/track',
+				'verb' => 'POST'
+			],
+			[
 				'name' => 'view#index',
 				'url' => '/',
 				'verb' => 'GET',
