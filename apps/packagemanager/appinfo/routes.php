@@ -19,8 +19,11 @@ return [
 		['name' => 'packages#update', 'url' => '/api/packages/{id}', 'verb' => 'PUT'],
 		['name' => 'packages#destroy', 'url' => '/api/packages/{id}', 'verb' => 'DELETE'],
 
-		// API package registration
-		['name' => 'package_registration#register', 'url' => '/api/internal/register', 'verb' => 'POST'],
+		// API package registration for AM/KAM flow
+		['name' => 'package_registration#register_amkam', 'url' => '/api/internal/register', 'verb' => 'POST'],
+
+		// API package registration for SMS flow
+		['name' => 'package_registration#update_package', 'url' => '/api/internal/update_package', 'verb' => 'POST'],
 
 		// API subscription history
 		['name' => 'packages#history', 'url' => '/api/history', 'verb' => 'GET'],
