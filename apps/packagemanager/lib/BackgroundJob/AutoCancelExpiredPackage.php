@@ -35,9 +35,17 @@ class AutoCancelExpiredPackage extends Job {
             $expiredSubscriptions = $this->subscriptionStatusMapper->findExpiredSubscriptions();
             foreach ($expiredSubscriptions as $expiredSubscription) {
                 $this->logger->debug("Found expired subscription for user: " . $expiredSubscription->getUserId());
-                // Cancel the subscription and log the event
+                // Cancel the subscription
                 $expiredSubscription->setStatus('expired');
                 $this->subscriptionStatusMapper->update($expiredSubscription);
+                // Deactivate user's account
+                $user = $this->userManager->get($expiredSubscription->getUserId());
+                if ($user) {
+                    $user->setEnabled(false);
+                    $this->logger->debug("Deactivated user account: " . $expiredSubscription->getUserId());
+                } else {
+                    $this->logger->error("User not found for subscription: " . $expiredSubscription->getUserId());
+                }
                 // Get the corresponding package details
                 $package = $this->packageMapper->findById($expiredSubscription->getPackageId());
                 // Create a history entry for the cancellation
@@ -57,14 +65,6 @@ class AutoCancelExpiredPackage extends Job {
                     $expiredSubscription->getEndAt()
                 );
                 $this->subscriptionHistoryMapper->insert($history);
-                // Deactivate user's account
-                $user = $this->userManager->get($expiredSubscription->getUserId());
-                if ($user) {
-                    $user->setEnabled(false);
-                    $this->logger->debug("Deactivated user account: " . $expiredSubscription->getUserId());
-                } else {
-                    $this->logger->error("User not found for subscription: " . $expiredSubscription->getUserId());
-                }
             }
         } catch (\Exception $e) {
             $this->logger->error("Error in AutoCancelExpiredPackage background job: " . $e->getMessage());
