@@ -16,4 +16,9 @@ class SubscriptionStatusMapper extends Mapper {
         $sql = 'SELECT * FROM ' . $this->getTableName() . ' WHERE user_id = ?';
         return $this->findEntity($sql, [$userId]);
     }
+
+    public function findExpiredSubscriptions(): array {
+        $sql = 'SELECT * FROM ' . $this->getTableName() . ' WHERE end_at < ? AND status = ?';
+        return $this->findEntities($sql, [time(), 'active']);
+    }
 }

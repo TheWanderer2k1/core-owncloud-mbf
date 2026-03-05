@@ -20,4 +20,14 @@
 		<section>OCA\PackageManager\Settings\Section</section>
 		<admin>OCA\PackageManager\Settings\Admin</admin>
 	</settings>
+
+	<background-jobs>
+		<job>OCA\PackageManager\BackgroundJob\AutoCancelExpiredPackage</job>
+	</background-jobs>
+
+	<repair-steps>
+		<uninstall>
+			<step>OCA\PackageManager\Repair\Uninstall\RemoveBackgroundJobs</step>
+		</uninstall>
+	</repair-steps>
 </info>
