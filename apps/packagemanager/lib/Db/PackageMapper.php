@@ -12,6 +12,11 @@ class PackageMapper extends Mapper {
         parent::__construct($db, 'packagemanager_packages', 'OCA\PackageManager\Db\Package');
     }
 
+    public function findById(int $id): Package {
+        $sql = 'SELECT * FROM ' . $this->getTableName() . ' WHERE id = ?';
+        return $this->findEntity($sql, [$id]);
+    }
+
     public function findByCode(string $code): Package {
         $sql = 'SELECT * FROM ' . $this->getTableName() . ' WHERE code = ?';
         return $this->findEntity($sql, [$code]);

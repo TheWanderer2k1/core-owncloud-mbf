@@ -95,7 +95,8 @@ class Application extends App {
 				$c->query('CustomLogService'),
 				$c->query('ServerContainer')->getUserManager(),
 				$c->query('SubscriptionStatusMapper'),
-				$c->query('SubscriptionHistoryMapper')
+				$c->query('SubscriptionHistoryMapper'),
+				$c->query('PackageMapper')
 			);
 		});
 		// adding background job
