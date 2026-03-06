@@ -325,31 +325,38 @@ class PackageRegistrationController extends Controller {
                     $result = $this->extend($ssoId, $package);
                     if (!$result) {
                         // send sms
-                        // code
+                        $this->sendSMS($serviceCode, $isdn, "Gia hạn gói " . $package->getName() . " không thành công.");
                         return new DataResponse([
                             'resultCode' => 0
                         ], 400);
                     }
+                    $this->sendSMS($serviceCode, $isdn, "Gia hạn gói " . $package->getName() . " thành công.");
                     break;
                 case 1:
                     $result = $this->register($ssoId, $package);
                     if (!$result) {
                         // send sms
-                        // code
+                        $this->sendSMS($serviceCode, $isdn, "Đăng ký gói " . $package->getName() . " không thành công.");
                         return new DataResponse([
                             'resultCode' => 0
                         ], 400);
+                    }
+                    if (isset($defaultPassword)) {
+                        $this->sendSMS($serviceCode, $isdn, "Đăng ký gói " . $package->getName() . " thành công.", ['user' => $phoneNumber, 'password' => $defaultPassword]);
+                    } else {
+                        $this->sendSMS($serviceCode, $isdn, "Đăng ký gói " . $package->getName() . " thành công");
                     }
                     break;
                 case 3:
                     $result = $this->cancel($ssoId, $packageCode);
                     if (!$result) {
                         // send sms
-                        // code
+                        $this->sendSMS($serviceCode, $isdn, "Hủy gói " . $package->getName() . " không thành công.");
                         return new DataResponse([
                             'resultCode' => 0
                         ], 400);
                     }
+                    $this->sendSMS($serviceCode, $isdn, "Hủy gói " . $package->getName() . " thành công.");
                     break;
                 default:
                     $this->logger->info("SMS registration: Invalid status value: " . $status);
@@ -357,8 +364,6 @@ class PackageRegistrationController extends Controller {
                         'resultCode' => 0
                     ], 400);
             }
-            // send sms
-            // code
             return new DataResponse([
                 'resultCode' => 1
             ], 200);
@@ -573,8 +578,50 @@ class PackageRegistrationController extends Controller {
         }
     }
 
-    private function sendSMS() {
-        // code
+    private function sendSMS(string $serviceCode, string $isdn, string $content, string $optional) {
+        try {
+            $client = $this->http->newClient();
+            $url = rtrim($this->cbsApiBaseUrl, '/') . '/ws/soap/vasp/sendmessage';
+            $soapXML = '<?xml version="1.0" encoding="UTF-8"?>' .
+                        '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" ' .
+                        'xmlns:obj="http://object.app.telsoft/">' .
+                            '<soapenv:Header/>' .
+                            '<soapenv:Body>' .
+                                '<obj:sendMessage>' .
+                                    '<ServiceCode>' . $serviceCode . '</ServiceCode>' .
+                                    '<ISDN>' . $isdn . '</ISDN>' .
+                                    '<Content>' . $content . '</Content>';
+                                    
+            if (isset($optional['brandname'])) {
+                $soapXML .= '<Brandname>' . $optional['brandname'] . '</Brandname>';
+            }
+            if (isset($optional['user'])) {
+                $soapXML .= '<User>' . $optional['user'] . '</User>';
+            }
+            if (isset($optional['password'])) {
+                $soapXML .= '<Password>' . $optional['password'] . '</Password>';
+            }
+            $soapXML .= '</obj:sendMessage>' .
+                        '</soapenv:Body>' .
+                    '</soapenv:Envelope>';
+
+            $response = $client->post($url, [
+                'body' => $soapXML,
+                'headers' => [
+                    'Content-Type' => 'text/xml; charset=UTF-8',
+                    'SOAPAction'   => '""'
+                ]
+            ]);
+            $body = (string) $response->getBody();
+            $data = json_decode($body, true);
+            if (isset($data['resultCode']) && $data['resultCode'] == 'OK') {
+                $this->logger->info("SMS sent successfully to $isdn with content: $content");
+            } else {
+                $this->logger->error("Failed to send SMS to $isdn. Response: " . $body);
+            }
+        } catch (\Throwable $e) {
+            $this->logger->error("Send SMS error: " . $e->getMessage());
+        }
     }
 
     private function createDriveUserFromSSOId(string $ssoId, string $email = null): ?\OCP\IUser {
