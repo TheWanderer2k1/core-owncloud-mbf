@@ -261,8 +261,8 @@ class PackageRegistrationController extends Controller {
                                 string $channel = '', string $charge_price = '', string $message_send = '', string $org_request = '') {
         try {
             // validate input
-            if (empty($isdn) || empty($packageCode) || empty($commandCode) || empty($status)) {
-                $this->logger->info("SMS registration: Invalid input");
+            if (empty($isdn) || empty($packageCode) || empty($commandCode) || $status === '') {
+                $this->logger->info("SMS registration: Invalid input" . " isdn: " . $isdn . " packageCode: " . $packageCode . " commandCode: " . $commandCode . " status: " . $status);
                 return new DataResponse([
                     'resultCode' => 0
                 ], 400);
@@ -278,38 +278,6 @@ class PackageRegistrationController extends Controller {
                 ], 400);
             }
 
-            // check for SSO account from phone number
-            // if account exists, extract sso id from result
-            // else create account in SSO and Drive
-            $ssoId = $this->checkSSOAccount(null, $phoneNumber);
-            if (!$ssoId) {
-                $defaultPassword = 'MbfDrive@2026';
-                $ssoId = $this->createSSOAccount(null, $phoneNumber, $defaultPassword);
-                if (!$ssoId) {
-                    throw new \Exception("Failed to create SSO account for phone number $phoneNumber");
-                }
-            }
-
-            // create Drive user with sso id as uid
-            $driveUser = $this->userManager->get($ssoId);
-            if (!$driveUser) {
-                $driveUser = $this->createDriveUserFromSSOId($ssoId);
-                if (!$driveUser) {
-                    throw new \Exception("Failed to create Drive user for SSO id $ssoId");
-                }
-            }
-
-            // check if command code is eq status: 0 means GH, 1 means DK, 3 means HUY 
-            $command = explode(' ', $commandCode)[0];
-            if (($command == 'GH' && $status != 0) ||
-                ($command == 'DK' && $status != 1) ||
-                ($command == 'HUY' && $status != 3)) {
-                $this->logger->info("SMS registration: Command code and status do not match: command code = " . $commandCode . ", status = " . $status);
-                return new DataResponse([
-                    'resultCode' => 0
-                ], 400);
-            }
-
             // get package info
             try {
                 $package = $this->packageMapper->findByCode($packageCode);
@@ -320,9 +288,23 @@ class PackageRegistrationController extends Controller {
                 ], 404);
             }
 
+            // force status to int
+            $status = (int)$status;
+
+            // check if command code is eq status: 0 means GH, 1 means DK, 3 means HUY 
+            $command = explode(' ', $commandCode)[0];
+            if (($command == 'GH' && $status != 0) ||
+                ($command == 'DK' && $status != 1) ||
+                ($command == 'HUY' && $status != 3)) {
+                $this->logger->info("SMS registration: Command code and status do not match: command code = " . $command . ", status = " . $status);
+                return new DataResponse([
+                    'resultCode' => 0
+                ], 400);
+            }
+
             switch ($status) {
                 case 0:
-                    $result = $this->extend($ssoId, $package);
+                    $result = $this->extend($phoneNumber, $package);
                     if (!$result) {
                         // send sms
                         $this->sendSMS($serviceCode, $isdn, "Gia hạn gói " . $package->getName() . " không thành công.");
@@ -333,7 +315,7 @@ class PackageRegistrationController extends Controller {
                     $this->sendSMS($serviceCode, $isdn, "Gia hạn gói " . $package->getName() . " thành công.");
                     break;
                 case 1:
-                    $result = $this->register($ssoId, $package);
+                    $result = $this->register($phoneNumber, $package);
                     if (!$result) {
                         // send sms
                         $this->sendSMS($serviceCode, $isdn, "Đăng ký gói " . $package->getName() . " không thành công.");
@@ -341,13 +323,22 @@ class PackageRegistrationController extends Controller {
                             'resultCode' => 0
                         ], 400);
                     }
-                    if (isset($defaultPassword)) {
-                        $this->sendSMS($serviceCode, $isdn, "Đăng ký gói " . $package->getName() . " thành công.", ['user' => $phoneNumber, 'password' => $defaultPassword]);
+                    if (is_string($result)) {
+                        $this->sendSMS($serviceCode, $isdn, "Đăng ký gói " . $package->getName() . " thành công.", ['user' => $phoneNumber, 'password' => $result]);
                     } else {
                         $this->sendSMS($serviceCode, $isdn, "Đăng ký gói " . $package->getName() . " thành công");
                     }
                     break;
                 case 3:
+                    $ssoId = $this->checkSSOAccount(null, $phoneNumber);
+                    if (!$ssoId) {
+                        $this->logger->info("No SSO account found for phone number: " . $phoneNumber);
+                        // send sms
+                        $this->sendSMS($serviceCode, $isdn, "Hủy gói " . $package->getName() . " không thành công.");
+                        return new DataResponse([
+                            'resultCode' => 0
+                        ], 400);
+                    }
                     $result = $this->cancel($ssoId, $packageCode);
                     if (!$result) {
                         // send sms
@@ -377,9 +368,29 @@ class PackageRegistrationController extends Controller {
         }
     }
 
-    private function register(string $ssoId, Package $package) {
+    private function register(string $phoneNumber, Package $package) {
         try {
+            // check for SSO account from phone number
+            // if account exists, extract sso id from result
+            // else create account in SSO and Drive
+            $ssoId = $this->checkSSOAccount(null, $phoneNumber);
+            if (!$ssoId) {
+                $defaultPassword = 'MbfDrive@2026';
+                $ssoId = $this->createSSOAccount(null, $phoneNumber, $defaultPassword);
+                if (!$ssoId) {
+                    throw new \Exception("Failed to create SSO account for phone number $phoneNumber");
+                }
+            }
+
+            // create Drive user with sso id as uid
             $driveUser = $this->userManager->get($ssoId);
+            if (!$driveUser) {
+                $driveUser = $this->createDriveUserFromSSOId($ssoId);
+                if (!$driveUser) {
+                    throw new \Exception("Failed to create Drive user for SSO id $ssoId");
+                }
+            }
+
             // Check if drive user is active
             if (!$driveUser->isEnabled()) {
                 // Check if user's used space is greater than this package quota
@@ -403,6 +414,9 @@ class PackageRegistrationController extends Controller {
             }
             // Update user quota
             $driveUser->setQuota($package->getQuota());
+            if (isset($defaultPassword)) {
+                return $defaultPassword;
+            }
             return true;
         } catch (\Throwable $e) {
             $this->logger->error("SMS registration error: " . $e->getMessage());
@@ -410,14 +424,22 @@ class PackageRegistrationController extends Controller {
         }
     }
 
-    private function extend(string $ssoId, Package $package) {
+    private function extend(string $phoneNumber, Package $package) {
         try {
+            // check for SSO account from phone number
+            $ssoId = $this->checkSSOAccount(null, $phoneNumber);
+            if (!$ssoId) {
+                $this->logger->info("No SSO account found for phone number: " . $phoneNumber);
+                return false;
+            }
+
             $driveUser = $this->userManager->get($ssoId);
             // Check if drive user is active
             if (!$driveUser->isEnabled()) {
                 $this->logger->info("Drive user not enable: " . $ssoId);
                 return false;
             }
+
             try {
                 $subscriptionStatus = $this->subscriptionStatusMapper->findByUserId($ssoId);
                 // Check if same package name
@@ -578,8 +600,10 @@ class PackageRegistrationController extends Controller {
         }
     }
 
-    private function sendSMS(string $serviceCode, string $isdn, string $content, string $optional) {
+    private function sendSMS(string $serviceCode, string $isdn, string $content, array $optional = []) {
         try {
+            $this->logger->debug("Sending SMS to $isdn with content: $content and optional params: " . json_encode($optional));
+            return true;
             $client = $this->http->newClient();
             $url = rtrim($this->cbsApiBaseUrl, '/') . '/ws/soap/vasp/sendmessage';
             $soapXML = '<?xml version="1.0" encoding="UTF-8"?>' .
