@@ -4,7 +4,7 @@ script('packagemanager', 'config');
 style('packagemanager', 'config');
 ?>
 <form class="section" id="packagemanager-config-form" action="<?php p(\OC::$server->getURLGenerator()->linkToRoute('packagemanager.config.save')); ?>" method="post" autocapitalize="none" novalidate>
-    <h2 class="app-name"><?php p($l->t('CBS Configuration'));?></h2>
+    <h2 class="app-name"><?php p($l->t('CBS and VASP Configuration'));?></h2>
     <p>
 		<em><?php p($l->t('This section requires a CBS app to be installed in ownCloud')); ?></em>
 	</p>
@@ -36,6 +36,22 @@ style('packagemanager', 'config');
             <label for="cbs_hash_secret_key"><?php p($l->t('Hash secret key')); ?></label>
             <input type="text" name="cbs_hash_secret_key" id="cbs_hash_secret_key" placeholder="Enter hash secret key"
                 value="<?php p($_['cbs_hash_secret_key']); ?>" autocomplete="off" autocorrect="off" autofocus />
+        </div>
+        <h3><?php p($l->t('VASP configuration is required.')); ?></h3>
+        <div class="form-group">
+            <label for="vasp_brandname"><?php p($l->t('Brand name')); ?></label>
+            <input type="text" name="vasp_brandname" id="vasp_brandname" placeholder="Enter brand name"
+                value="<?php p($_['vasp_brandname']); ?>" autocomplete="off" autocorrect="off" autofocus />
+        </div>
+        <div class="form-group">
+            <label for="vasp_user"><?php p($l->t('Username')); ?></label>
+            <input type="text" name="vasp_user" id="vasp_user" placeholder="Enter username"
+                value="<?php p($_['vasp_user']); ?>" autocomplete="off" autocorrect="off" autofocus />
+        </div>
+        <div class="form-group">
+            <label for="vasp_password"><?php p($l->t('Password')); ?></label>
+            <input type="text" name="vasp_password" id="vasp_password" placeholder="Enter password"
+                value="<?php p($_['vasp_password']); ?>" autocomplete=" off" autocorrect="off" autofocus />
         </div>
         <div class="form-group" style="margin-left: 10px;">
             <label></label>

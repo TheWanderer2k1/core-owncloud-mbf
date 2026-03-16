@@ -22,6 +22,9 @@ class Admin implements ISettings {
         $tmpl->assign('cbs_api_base_url', $this->config->getAppValue($this->appName, 'cbs_api_base_url', ''));
         $tmpl->assign('cbs_product_code', $this->config->getAppValue($this->appName, 'cbs_product_code', ''));
         $tmpl->assign('cbs_hash_secret_key', $this->config->getAppValue($this->appName, 'cbs_hash_secret_key', ''));
+        $tmpl->assign('vasp_brandname', $this->config->getAppValue($this->appName, 'vasp_brandname', ''));
+        $tmpl->assign('vasp_user', $this->config->getAppValue($this->appName, 'vasp_user', ''));
+        $tmpl->assign('vasp_password', $this->config->getAppValue($this->appName, 'vasp_password', ''));
         return $tmpl;
     }
 

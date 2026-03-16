@@ -55,6 +55,10 @@ class PackageRegistrationController extends Controller {
         $this->cbsApiBaseUrl = $this->config->getAppValue($appName, 'cbs_api_base_url', '');
         $this->cbsProductCode = $this->config->getAppValue($appName, 'cbs_product_code', '');
         $this->cbsHashSecretKey = $this->config->getAppValue($appName, 'cbs_hash_secret_key', '');
+        // vasp config for sending sms
+        $this->vaspBrandname = $this->config->getAppValue($appName, 'vasp_brandname', '');
+        $this->vaspUser = $this->config->getAppValue($appName, 'vasp_user', '');
+        $this->vaspPassword = $this->config->getAppValue($appName, 'vasp_password', '');
     }
 
     /**
@@ -307,26 +311,46 @@ class PackageRegistrationController extends Controller {
                     $result = $this->extend($phoneNumber, $package);
                     if (!$result) {
                         // send sms
-                        $this->sendSMS($serviceCode, $isdn, "Gia hạn gói " . $package->getName() . " không thành công.");
+                        $this->sendSMS($serviceCode, $isdn, "Gia hạn gói " . $package->getName() . " không thành công.", [
+                            'brandname' => $this->vaspBrandname,
+                            'user' => $this->vaspUser,
+                            'password' => $this->vaspPassword
+                        ]);
                         return new DataResponse([
                             'resultCode' => 0
                         ], 400);
                     }
-                    $this->sendSMS($serviceCode, $isdn, "Gia hạn gói " . $package->getName() . " thành công.");
+                    $this->sendSMS($serviceCode, $isdn, "Gia hạn gói " . $package->getName() . " thành công.", [
+                        'brandname' => $this->vaspBrandname,
+                        'user' => $this->vaspUser,
+                        'password' => $this->vaspPassword
+                    ]);
                     break;
                 case 1:
                     $result = $this->register($phoneNumber, $package);
                     if (!$result) {
                         // send sms
-                        $this->sendSMS($serviceCode, $isdn, "Đăng ký gói " . $package->getName() . " không thành công.");
+                        $this->sendSMS($serviceCode, $isdn, "Đăng ký gói " . $package->getName() . " không thành công.", [
+                            'brandname' => $this->vaspBrandname,
+                            'user' => $this->vaspUser,
+                            'password' => $this->vaspPassword
+                        ]);
                         return new DataResponse([
                             'resultCode' => 0
                         ], 400);
                     }
                     if (is_string($result)) {
-                        $this->sendSMS($serviceCode, $isdn, "Đăng ký gói " . $package->getName() . " thành công.", ['user' => $phoneNumber, 'password' => $result]);
+                        $this->sendSMS($serviceCode, $isdn, "Đăng ký gói " . $package->getName() . " thành công. Tài khoản: " . $phoneNumber . ". Mật khẩu: " . $result, [
+                            'brandname' => $this->vaspBrandname,
+                            'user' => $this->vaspUser,
+                            'password' => $this->vaspPassword
+                        ]);
                     } else {
-                        $this->sendSMS($serviceCode, $isdn, "Đăng ký gói " . $package->getName() . " thành công");
+                        $this->sendSMS($serviceCode, $isdn, "Đăng ký gói " . $package->getName() . " thành công", [
+                            'brandname' => $this->vaspBrandname,
+                            'user' => $this->vaspUser,
+                            'password' => $this->vaspPassword
+                        ]);
                     }
                     break;
                 case 3:
@@ -334,7 +358,11 @@ class PackageRegistrationController extends Controller {
                     if (!$ssoId) {
                         $this->logger->info("No SSO account found for phone number: " . $phoneNumber);
                         // send sms
-                        $this->sendSMS($serviceCode, $isdn, "Hủy gói " . $package->getName() . " không thành công.");
+                        $this->sendSMS($serviceCode, $isdn, "Hủy gói " . $package->getName() . " không thành công.", [
+                            'brandname' => $this->vaspBrandname,
+                            'user' => $this->vaspUser,
+                            'password' => $this->vaspPassword
+                        ]);
                         return new DataResponse([
                             'resultCode' => 0
                         ], 400);
@@ -342,12 +370,20 @@ class PackageRegistrationController extends Controller {
                     $result = $this->cancel($ssoId, $packageCode);
                     if (!$result) {
                         // send sms
-                        $this->sendSMS($serviceCode, $isdn, "Hủy gói " . $package->getName() . " không thành công.");
+                        $this->sendSMS($serviceCode, $isdn, "Hủy gói " . $package->getName() . " không thành công.", [
+                            'brandname' => $this->vaspBrandname,
+                            'user' => $this->vaspUser,
+                            'password' => $this->vaspPassword
+                        ]);
                         return new DataResponse([
                             'resultCode' => 0
                         ], 400);
                     }
-                    $this->sendSMS($serviceCode, $isdn, "Hủy gói " . $package->getName() . " thành công.");
+                    $this->sendSMS($serviceCode, $isdn, "Hủy gói " . $package->getName() . " thành công.", [
+                        'brandname' => $this->vaspBrandname,
+                        'user' => $this->vaspUser,
+                        'password' => $this->vaspPassword
+                    ]);
                     break;
                 default:
                     $this->logger->info("SMS registration: Invalid status value: " . $status);
@@ -602,8 +638,6 @@ class PackageRegistrationController extends Controller {
 
     private function sendSMS(string $serviceCode, string $isdn, string $content, array $optional = []) {
         try {
-            $this->logger->debug("Sending SMS to $isdn with content: $content and optional params: " . json_encode($optional));
-            return true;
             $client = $this->http->newClient();
             $url = rtrim($this->cbsApiBaseUrl, '/') . '/ws/soap/vasp/sendmessage';
             $soapXML = '<?xml version="1.0" encoding="UTF-8"?>' .
@@ -617,7 +651,7 @@ class PackageRegistrationController extends Controller {
                                     '<Content>' . $content . '</Content>';
                                     
             if (isset($optional['brandname'])) {
-                $soapXML .= '<Brandname>' . $optional['brandname'] . '</Brandname>';
+                $soapXML .= '<UseBrandname>' . $optional['brandname'] . '</UseBrandname>';
             }
             if (isset($optional['user'])) {
                 $soapXML .= '<User>' . $optional['user'] . '</User>';
@@ -637,12 +671,7 @@ class PackageRegistrationController extends Controller {
                 ]
             ]);
             $body = (string) $response->getBody();
-            $data = json_decode($body, true);
-            if (isset($data['resultCode']) && $data['resultCode'] == 'OK') {
-                $this->logger->info("SMS sent successfully to $isdn with content: $content");
-            } else {
-                $this->logger->error("Failed to send SMS to $isdn. Response: " . $body);
-            }
+            $this->logger->debug("SMS send response: " . $body);
         } catch (\Throwable $e) {
             $this->logger->error("Send SMS error: " . $e->getMessage());
         }
