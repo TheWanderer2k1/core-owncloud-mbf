@@ -985,10 +985,17 @@ class PackageRegistrationController extends Controller {
                 'isAdmin' => false,
                 'tenantCode' => $clientId . "-TENANT",
                 'domain' => 'https://drive.mobifone.vn',
-                'registerType' => 0,
+                // 'registerType' => 0,
                 'email' => $email,
                 'phoneNumber' => $phoneNumber,
             ];
+            // if only phoneNumber then registerType is 2
+            // else registerType is 1
+            if ($phoneNumber && !$email) {
+                $body['registerType'] = 2;
+            } else {
+                $body['registerType'] = 1;
+            }
             $response = $client->post($url, [
                 'body' => json_encode($body),
                 'headers' => [
