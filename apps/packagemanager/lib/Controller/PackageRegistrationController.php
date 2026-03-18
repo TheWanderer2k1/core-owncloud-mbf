@@ -941,8 +941,8 @@ class PackageRegistrationController extends Controller {
                 'body' => json_encode([
                     'username' => $email ? $email : '',
                     'phoneNumber' => $phoneNumber ? $phoneNumber : '',
-                    'clientId' => $this->clientId,
-                    'realmName' => $this->realmName
+                    'clientId' => $clientId,
+                    'realmName' => $realmName
                 ]),
                 'headers' => [
                     'Content-Type' => 'application/json'
