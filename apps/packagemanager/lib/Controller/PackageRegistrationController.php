@@ -267,6 +267,22 @@ class PackageRegistrationController extends Controller {
             // validate input
             if (empty($isdn) || empty($packageCode) || empty($commandCode) || $status === '') {
                 $this->logger->info("SMS registration: Invalid input" . " isdn: " . $isdn . " packageCode: " . $packageCode . " commandCode: " . $commandCode . " status: " . $status);
+		$this->logger->info("Full arguments: " . json_encode([
+    			'isdn'          => $isdn,
+    			'serviceCode'   => $serviceCode,
+    			'groupCode'     => $groupCode,
+    			'packageCode'   => $packageCode,
+    			'commandCode'   => $commandCode,
+    			'regDatetime'   => $regDatetime,
+    			'staDatetime'   => $staDatetime,
+    			'endDatetime'   => $endDatetime,
+    			'expireDatetime'=> $expireDatetime,
+    			'status'        => $status,
+    			'channel'       => $channel,
+    			'charge_price'  => $charge_price,
+    			'message_send'  => $message_send,
+    			'org_request'   => $org_request
+		]));
                 return new DataResponse([
                     'resultCode' => 0
                 ], 400);
