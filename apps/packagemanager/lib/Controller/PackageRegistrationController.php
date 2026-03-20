@@ -182,7 +182,7 @@ class PackageRegistrationController extends Controller {
                         }
                         $packageQuotaBytes = \OCP\Util::computerFileSize($package->getQuota());
                         if ($usedSpace > $packageQuotaBytes) {
-                            $this->logger->debug("User $ssoId used space $usedSpace exceeds package quota $packageQuotaBytes");
+                            $this->logger->info("User $ssoId used space $usedSpace exceeds package quota $packageQuotaBytes");
                             return new DataResponse([
                                 'status' => 2, 
                                 'message' => 'Cannot activate account: used space exceeds package quota'
@@ -444,7 +444,7 @@ class PackageRegistrationController extends Controller {
                 }
                 $packageQuotaBytes = \OCP\Util::computerFileSize($package->getQuota());
                 if ($usedSpace > $packageQuotaBytes) {
-                    $this->logger->debug("User $ssoId used space $usedSpace exceeds package quota $packageQuotaBytes");
+                    $this->logger->info("User $ssoId used space $usedSpace exceeds package quota $packageQuotaBytes");
                     return false;
                 }
                 // (Re)activate user
@@ -498,7 +498,7 @@ class PackageRegistrationController extends Controller {
                 }
                 $packageQuotaBytes = \OCP\Util::computerFileSize($package->getQuota());
                 if ($usedSpace > $packageQuotaBytes) {
-                    $this->logger->debug("User $ssoId used space $usedSpace exceeds package quota $packageQuotaBytes");
+                    $this->logger->info("User $ssoId used space $usedSpace exceeds package quota $packageQuotaBytes");
                     return false;
                 }
                 // Extend package duration
@@ -630,7 +630,7 @@ class PackageRegistrationController extends Controller {
             $usedSpace = $this->getUserUsedSpace($ssoId);
             $defaultQuotaBytes = \OCP\Util::computerFileSize($this->config->getSystemValue('default_user_quota', '15 GB'));
             if ($usedSpace === null || $usedSpace > $defaultQuotaBytes) {
-                $this->logger->debug("User $ssoId used space $usedSpace exceeds default quota $defaultQuotaBytes");
+                $this->logger->info("User $ssoId used space $usedSpace exceeds default quota $defaultQuotaBytes");
                 // disable user account
                 $driveUser->setEnabled(false);
                 return true;
@@ -678,7 +678,7 @@ class PackageRegistrationController extends Controller {
                 ]
             ]);
             $body = (string) $response->getBody();
-            $this->logger->debug("SMS send response: " . $body);
+            $this->logger->info("SMS send response: " . $body);
         } catch (\Throwable $e) {
             $this->logger->error("Send SMS error: " . $e->getMessage());
         }
@@ -690,7 +690,7 @@ class PackageRegistrationController extends Controller {
             $userBackend = $this->userManager->getBackend('OCA\SsoAuth\UserBackend');
             $userBackend->createUser($ssoId, $randomPassword);
             $newUser = $this->userManager->createUserFromBackend($ssoId, $randomPassword, $userBackend);
-            $this->logger->debug("Created new Drive user with uid $ssoId");
+            $this->logger->info("Created new Drive user with uid $ssoId");
             if (!$newUser) {
                 throw new \Exception("Failed to create Drive user for SSO id $ssoId");
             }
@@ -790,7 +790,7 @@ class PackageRegistrationController extends Controller {
                 }
                 $this->subscriptionStatusMapper->update($subscriptionStatus);
             } catch (DoesNotExistException $e) {
-                $this->logger->debug("User $userId has no existing subscription");
+                $this->logger->info("User $userId has no existing subscription");
                 // calculating duration
                 if ($package->getUnit() == 'day') {
                     $durationInSeconds = $package->getDuration() * 86400;
@@ -891,12 +891,12 @@ class PackageRegistrationController extends Controller {
         $tokenBinary = hex2bin($token);
 
         if (!$expectedBinary || !$tokenBinary) {
-            $this->logger->debug("Validate token: Hash/Convert string to bin failed!");
+            $this->logger->info("Validate token: Hash/Convert string to bin failed!");
             return false;
         }
 
         if (strlen($expectedBinary) != strlen($tokenBinary)) {
-            $this->logger->debug("Validate token: strlen does not equal!");
+            $this->logger->info("Validate token: strlen does not equal!");
             return false;
         }
 
@@ -926,7 +926,7 @@ class PackageRegistrationController extends Controller {
             $body = (string) $response->getBody();
             $data = json_decode($body, true);
             if (!isset($data['access_token'])) {
-                $this->logger->debug("SSO get token response: " . $body);
+                $this->logger->info("SSO get token response: " . $body);
                 throw new \Exception("No access_token in response");
             }
             return $data['access_token'];
@@ -1033,7 +1033,7 @@ class PackageRegistrationController extends Controller {
                     'Authorization' => 'Bearer ' . $token
                 ]
             ]);
-            $this->logger->debug("User $ssoUserId is in tenant " . $clientId . "-TENANT");
+            $this->logger->info("User $ssoUserId is in tenant " . $clientId . "-TENANT");
             return $ssoUserId;
         } catch (\Throwable $e) {
             $this->logger->error("SSO create account error: " . $e->getMessage());

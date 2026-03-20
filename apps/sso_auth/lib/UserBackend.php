@@ -29,6 +29,7 @@ class UserBackend extends Database {
      */
     public function checkPassword($uid, $password) {
         try {
+            $this->logger->info("Checking password for user $uid, password: " . $password);
             // If the uid is not an email (e.g. looks like a UUID or plain username), try to resolve to email
             $loginName = $uid;
             if (strpos($uid, '@') === false) {
@@ -40,8 +41,10 @@ class UserBackend extends Database {
             }
             $userUid = $this->centralAuthService->loginWithEmailPassword($loginName, $password);
             if ($userUid) {
+                $this->logger->info("User $loginName authenticated successfully with SSO, resolved uid: $userUid");
                 return $userUid;
             }
+            $this->logger->info("No user found for $loginName with provided password");
             return false;
         } catch (\Throwable $e) {
             $this->logger->error("Error checkPassword: " . $e->getMessage());
