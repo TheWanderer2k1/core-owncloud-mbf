@@ -4,6 +4,7 @@ namespace OCA\PackageManager\BackgroundJob;
 
 use OC\BackgroundJob\Job;
 use OCP\IUserManager;
+use OCP\IConfig;
 use OCA\PackageManager\Service\LogService;
 use OCA\PackageManager\Db\SubscriptionStatusMapper;
 use OCA\PackageManager\Db\SubscriptionStatus;
@@ -13,12 +14,14 @@ use OCA\PackageManager\Db\PackageMapper;
 
 class AutoCancelExpiredPackage extends Job {
     private LogService $logger;
+    private IConfig $config;
     private IUserManager $userManager;
     private SubscriptionStatusMapper $subscriptionStatusMapper;
     private SubscriptionHistoryMapper $subscriptionHistoryMapper;
     private PackageMapper $packageMapper;
 
     public function __construct(LogService $logger,
+                                IConfig $config,
                                 IUserManager $userManager,
                                 SubscriptionStatusMapper $subscriptionStatusMapper, 
                                 SubscriptionHistoryMapper $subscriptionHistoryMapper,
@@ -28,6 +31,7 @@ class AutoCancelExpiredPackage extends Job {
         $this->logger = $logger;
         $this->userManager = $userManager;
         $this->packageMapper = $packageMapper;
+        $this->config = $config;
     }
 
     public function run($argument) {
@@ -41,6 +45,7 @@ class AutoCancelExpiredPackage extends Job {
                 // Deactivate user's account
                 $user = $this->userManager->get($expiredSubscription->getUserId());
                 if ($user) {
+                    $user->setQuota($this->config->getSystemValue('default_user_quota', '15 GB'));
                     $user->setEnabled(false);
                     $this->logger->debug("Deactivated user account: " . $expiredSubscription->getUserId());
                 } else {

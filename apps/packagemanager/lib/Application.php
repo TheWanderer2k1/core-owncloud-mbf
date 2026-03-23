@@ -93,6 +93,7 @@ class Application extends App {
 		$container->registerService('AutoCancelExpiredPackage', function(IContainer $c) {
 			return new \OCA\PackageManager\BackgroundJob\AutoCancelExpiredPackage(
 				$c->query('CustomLogService'),
+				$c->query('ServerContainer')->getConfig(),
 				$c->query('ServerContainer')->getUserManager(),
 				$c->query('SubscriptionStatusMapper'),
 				$c->query('SubscriptionHistoryMapper'),
