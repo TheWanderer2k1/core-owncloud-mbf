@@ -120,24 +120,6 @@ class Version20260120040159 implements ISchemaMigration {
                 'notnull' => true,
             ]);
             $subscriptionHistoryTable->setPrimaryKey(['id']);
-            $subscriptionHistoryTable->addForeignKeyConstraint(
-                "{$this->prefix}packagemanager_subscription_status",
-                ['subscription_status_id'],
-                ['id'],
-                ['onDelete' => 'CASCADE']
-            );
-            $subscriptionHistoryTable->addForeignKeyConstraint(
-                "{$this->prefix}packagemanager_packages",
-                ['package_id'],
-                ['id'],
-                ['onDelete' => 'CASCADE']
-            );
-            $subscriptionHistoryTable->addForeignKeyConstraint(
-                "oc_users",
-                ['user_id'],
-                ['uid'],
-                ['onDelete' => 'CASCADE']
-            );
         }
     }
 }
