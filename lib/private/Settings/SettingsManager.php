@@ -226,6 +226,7 @@ class SettingsManager implements ISettingsManager {
 				new Section('security', $this->l->t('Security'), 30, 'shield'),
 				new Section('encryption', $this->l->t('Encryption'), 20),
 				new Section('additional', $this->l->t('Additional'), -10, 'more'),
+				new Section('sso_auth_personal', $this->l->t('Account Deletion'), -11, 'settings')
 			];
 		}
 		return [];

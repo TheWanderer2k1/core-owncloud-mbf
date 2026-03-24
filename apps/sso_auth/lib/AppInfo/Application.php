@@ -5,6 +5,7 @@ namespace OCA\SsoAuth\AppInfo;
 
 use OCA\SsoAuth\Controller\ConfigController;
 use OCA\SsoAuth\Controller\RegisterController;
+use OCA\SsoAuth\Controller\AccountController;
 use OCA\SsoAuth\Service\CentralAuthService;
 use OCA\SsoAuth\Service\LogService;
 use OCP\AppFramework\App;
@@ -55,6 +56,21 @@ class Application extends App {
                 $server->getConfig(),
                 $server->getHTTPClientService(),
                 $server->getUserManager(),
+                $c->query(LogService::class)
+            );
+        });
+
+        /**
+        * AccountController
+        */
+        $container->registerService(AccountController::class, function ($c) {
+            $server = $c->query('ServerContainer');
+            return new AccountController(
+                'sso_auth',
+                $c->query('Request'),
+                $server->getConfig(),
+                $server->getUserSession(),
+                $server->getGroupManager(),
                 $c->query(LogService::class)
             );
         });

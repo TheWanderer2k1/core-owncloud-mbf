@@ -17,5 +17,6 @@
   <settings>
     <section>OCA\SsoAuth\Settings\Section</section>
     <admin>OCA\SsoAuth\Settings\Admin</admin>
+    <personal>OCA\SsoAuth\Settings\Personal</personal>
   </settings>
 </info>
