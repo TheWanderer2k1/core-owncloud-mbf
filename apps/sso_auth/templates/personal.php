@@ -4,7 +4,7 @@
 script('sso_auth', 'personal');
 style('sso_auth', 'personal');
 ?>
-<form id="delete-account-form" action="<?php p(\OC::$server->getURLGenerator()->linkToRoute('sso_auth.account.delete')); ?>" method="post" autocapitalize="none" novalidate>
+<form class="section" id="delete-account-form" action="<?php p(\OC::$server->getURLGenerator()->linkToRoute('sso_auth.account.delete')); ?>" method="post" autocapitalize="none" novalidate>
     <h2><?php p($l->t('Delete Account')); ?></h2>
     <p>
         <?php p($l->t('Deleting your account will remove all your data from the system. This action cannot be undone.')); ?>
