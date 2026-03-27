@@ -32,5 +32,11 @@ return [
             'url'  => '/internal/register/sms',
             'verb' => 'POST'
         ],
+        // tmp route for delete account just to pass ios review, will be removed in future
+        [
+            'name' => 'account#delete',
+            'url'  => '/account/delete',
+            'verb' => 'POST'
+        ],
     ]
 ];

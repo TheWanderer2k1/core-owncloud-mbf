@@ -26,6 +26,7 @@
         "Month": "Tháng",
         "Year": "Năm",
         "CBS Configuration": "Cấu hình CBS",
+        "Account deletion": "Xóa tài khoản",
         "This section requires a CBS app to be installed in ownCloud": "Phần này yêu cầu một ứng dụng CBS được cài đặt trong ownCloud",
         "CBS configuration is required.": "Cấu hình CBS là bắt buộc.",
         "Admin user": "Tài khoản quản trị",

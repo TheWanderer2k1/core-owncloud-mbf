@@ -68,7 +68,10 @@
         "Confirm password is not match !": "Xác nhận mật khẩu không khớp !",
         "Registering...": "Đang đăng ký...",
         "Registration failed.": "Đăng ký thất bại.",
-        "Registration successful. You can now log in.": "Đăng ký thành công. Bây giờ bạn có thể đăng nhập."
+        "Registration successful. You can now log in.": "Đăng ký thành công. Bây giờ bạn có thể đăng nhập.",
+        "Delete Account": "Xóa tài khoản",
+        "Deleting your account will remove all your data from the system. This action cannot be undone.": "Xóa tài khoản của bạn sẽ xóa tất cả dữ liệu của bạn khỏi hệ thống. Hành động này không thể hoàn tác.",
+        "If you want to proceed, please click the button below to delete your account.": "Nếu bạn muốn tiếp tục, vui lòng nhấn nút bên dưới để xóa tài khoản."
     },
     "pluralForm": "nplurals=1; plural=0;"
 }
