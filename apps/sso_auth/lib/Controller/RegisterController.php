@@ -73,8 +73,8 @@ class RegisterController extends Controller {
             // if account exists, return login sso page
             // else create account in SSO and Drive
             $exists = $this->checkSSOAccount($email, $phoneNumber);
-            $this->logger->error("SSO account already exists for email: $email, phone: $phoneNumber, exists: $exists");
             if ($exists) {
+                $this->logger->info("SSO account already exists for email: $email, phone: $phoneNumber, exists: $exists");
                 // return new DataResponse(['status' => 'error', 'message' => 'Email or phone number already exist!'], 400);
                 $parameters = [
                     'email' => $email,
@@ -82,7 +82,7 @@ class RegisterController extends Controller {
                 ];
                 return new TemplateResponse($this->appName, 'login', $parameters);
             }
-            $this->logger->error("SSO account does not exist for email: $email, phone: $phoneNumber");
+            $this->logger->info("SSO account does not exist for email: $email, phone: $phoneNumber");
             // call api create SSO account
             $uid = $this->createSSOAccount($email, $phoneNumber, $password);
             if (!$uid) {
@@ -245,14 +245,14 @@ class RegisterController extends Controller {
             $body = (string) $response->getBody();
             $data = json_decode($body, true);
             if (!isset($data["success"])) {
-                $this->logger->error("SSO check account response: " . $body);
+                $this->logger->info("SSO check account response: " . $body);
                 throw new \Exception("There is no success field in response");
             }
             if (!(bool)$data["success"] && isset($data["result"]["ssoId"])) {
-                $this->logger->error("SSO check account indicates existence: " . $data["result"]["ssoId"]);
+                $this->logger->info("SSO check account indicates existence: " . $data["result"]["ssoId"]);
                 return $data["result"]["ssoId"];
             }
-            $this->logger->error("SSO check account indicates non-existence: " . $body);
+            $this->logger->info("SSO check account indicates non-existence: " . $body);
             return null;
         } catch (\Throwable $e) {
             $this->logger->error("SSO check account error: " . $e->getMessage());
@@ -294,7 +294,7 @@ class RegisterController extends Controller {
                     'Authorization' => 'Bearer ' . $token
                 ]
             ]);
-            $this->logger->error("SSO create account with body: " . json_encode($body));
+            $this->logger->info("SSO create account with body: " . json_encode($body));
             $body = (string) $response->getBody();
             $data = json_decode($body, true);
             if (!$data["success"]) {
