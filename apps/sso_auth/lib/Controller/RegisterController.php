@@ -70,12 +70,17 @@ class RegisterController extends Controller {
             }
 
             // call api check SSO account
-            // if account exists, return error message
+            // if account exists, return login sso page
             // else create account in SSO and Drive
             $exists = $this->checkSSOAccount($email, $phoneNumber);
             $this->logger->error("SSO account already exists for email: $email, phone: $phoneNumber, exists: $exists");
             if ($exists) {
-                return new DataResponse(['status' => 'error', 'message' => 'Email or phone number already exist!'], 400);
+                // return new DataResponse(['status' => 'error', 'message' => 'Email or phone number already exist!'], 400);
+                $parameters = [
+                    'email' => $email,
+                    'phoneNumber' => $phoneNumber
+                ];
+                return new TemplateResponse($this->appName, 'login', $parameters);
             }
             $this->logger->error("SSO account does not exist for email: $email, phone: $phoneNumber");
             // call api create SSO account

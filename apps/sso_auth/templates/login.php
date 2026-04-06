@@ -47,7 +47,9 @@ style('sso_auth', 'auth');
 
         <div class="form-group">
             <button type="submit" id="sso-auth-login-submit">
-                <?php p($l->t('Login')); ?>
+                <span>
+                    <?php p($l->t('Login')); ?>
+                </span>
             </button>
         </div>
     </form>
