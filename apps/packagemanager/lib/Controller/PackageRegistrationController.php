@@ -295,6 +295,13 @@ class PackageRegistrationController extends Controller {
             // force status to int
             $status = (int)$status;
 
+            // Regex: must start with GH, DK, or HUY, followed by a space and then some non-space text
+            $commandCode = trim($commandCode);
+            if (!preg_match('/^(GH|DK|HUY) \S+$/', $commandCode)) {
+                $this->logger->info("Invalid command code format: " . $commandCode);
+                return new DataResponse(['resultCode' => 0], 400);
+            }
+
             // check if command code is eq status: 0 means GH, 1 means DK, 3 means HUY 
             $command = explode(' ', $commandCode)[0];
             if (($command == 'GH' && $status != 0) ||
