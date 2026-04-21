@@ -43,11 +43,17 @@ class AutoCancelExpiredPackage extends Job {
                 $expiredSubscription->setStatus('expired');
                 $this->subscriptionStatusMapper->update($expiredSubscription);
                 // Deactivate user's account
-                $user = $this->userManager->get($expiredSubscription->getUserId());
+                $userId = $expiredSubscription->getUserId();
+                $user = $this->userManager->get($userId);
                 if ($user) {
-                    $user->setQuota($this->config->getSystemValue('default_user_quota', '15 GB'));
-                    $user->setEnabled(false);
-                    $this->logger->debug("Deactivated user account: " . $expiredSubscription->getUserId());
+                    $defaultQuota = $this->config->getSystemValue('default_user_quota', '1 MB');
+                    $user->setQuota($defaultQuota);
+                    $usedSpace = $this->getUserUsedSpace($userId);
+                    $packageQuotaBytes = \OCP\Util::computerFileSize($defaultQuota);
+                    if ($usedSpace === null || $usedSpace > $packageQuotaBytes) {
+                        $user->setEnabled(false);
+                        $this->logger->info("Deactivated user because used space exceeded default quota: " . $expiredSubscription->getUserId());   
+                    }
                 } else {
                     $this->logger->error("User not found for subscription: " . $expiredSubscription->getUserId());
                 }
@@ -73,6 +79,39 @@ class AutoCancelExpiredPackage extends Job {
             }
         } catch (\Exception $e) {
             $this->logger->error("Error in AutoCancelExpiredPackage background job: " . $e->getMessage());
+        }
+    }
+
+    private function getUserUsedSpace(string $userId): ?float {
+        try {
+            if (!$userId) {
+                // if there is no userId, query will return the total used space of all users
+                return null;
+            }
+            $sql = 'SELECT SUM(fc.size) as total_size'.
+                    ' FROM `*PREFIX*filecache` as fc '.
+                    ' JOIN `*PREFIX*storages` as st ON fc.storage = st.numeric_id '.
+                    ' WHERE st.id LIKE ? '.
+                    ' AND fc.path LIKE ? '.
+                    ' AND fc.mimetype != (SELECT id FROM `*PREFIX*mimetypes` WHERE mimetype = ?)';
+            $likeUserId = '%'.$userId;
+            $likePath = 'files/%';
+            $mimetype = 'httpd/unix-directory';
+            $dbConnection = \OC::$server->getDatabaseConnection();
+            $query = $dbConnection->prepare($sql);
+            $query->bindParam(1, $likeUserId, \PDO::PARAM_STR);
+            $query->bindParam(2, $likePath, \PDO::PARAM_STR);
+            $query->bindParam(3, $mimetype, \PDO::PARAM_STR);
+            $query->execute();
+            $row = $query->fetch();
+            $query->closeCursor();
+            if ($row) {
+                return (float)reset($row);
+            }
+            return 0.0;
+        } catch (\Throwable $e) {
+            $this->logger->error("Get user used space error for user $userId: " . $e->getMessage());
+            return null;
         }
     }
 }
