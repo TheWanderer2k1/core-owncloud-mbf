@@ -46,7 +46,7 @@ class AutoCancelExpiredPackage extends Job {
                 $userId = $expiredSubscription->getUserId();
                 $user = $this->userManager->get($userId);
                 if ($user) {
-                    $defaultQuota = $this->config->getSystemValue('default_user_quota', '1 MB');
+                    $defaultQuota = $this->config->getSystemValue('default_user_quota', '15 GB');
                     $user->setQuota($defaultQuota);
                     $usedSpace = $this->getUserUsedSpace($userId);
                     $packageQuotaBytes = \OCP\Util::computerFileSize($defaultQuota);
