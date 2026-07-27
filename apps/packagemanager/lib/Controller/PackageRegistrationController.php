@@ -264,9 +264,9 @@ class PackageRegistrationController extends Controller {
                                 string $regDatetime = '', string $staDatetime = '', string $endDatetime = '', string $expireDatetime = '', string $status = '',
                                 string $channel = '', string $charge_price = '', string $message_send = '', string $org_request = '') {
         try {
+            $this->logger->info("SMS registration: Check input" . " isdn: " . $isdn . " packageCode: " . $packageCode . " commandCode: " . $commandCode . " status: " . $status);
             // validate input
             if (empty($isdn) || empty($packageCode) || empty($commandCode) || $status === '') {
-                $this->logger->info("SMS registration: Invalid input" . " isdn: " . $isdn . " packageCode: " . $packageCode . " commandCode: " . $commandCode . " status: " . $status);
 		$this->logger->info("Full arguments: " . json_encode([
     			'isdn'          => $isdn,
     			'serviceCode'   => $serviceCode,
@@ -1026,7 +1026,7 @@ class PackageRegistrationController extends Controller {
                     'Authorization' => 'Bearer ' . $token
                 ]
             ]);
-            $this->logger->error("SSO create account with body: " . json_encode($body));
+            $this->logger->info("SSO create account with body: " . json_encode($body));
             $body = (string) $response->getBody();
             $data = json_decode($body, true);
             if (!$data["success"]) {
