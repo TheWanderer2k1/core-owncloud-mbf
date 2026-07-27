@@ -97,5 +97,10 @@ class Application extends App {
 
         // Inject custom JS to override login text
         \OCP\Util::addScript('sso_auth', 'override-login');
+
+        // This optional optimisation is a no-op outside the settings/users
+        // page. Disabling sso_auth restores ownCloud's stock list behaviour.
+        \OCP\Util::addScript('sso_auth', 'user-management-pagination');
+        \OCP\Util::addStyle('sso_auth', 'user-management-pagination');
     }
 }

@@ -1,0 +1,40 @@
+#userlist+.loading {
+	height: 0 !important;
+	margin: 0 !important;
+	overflow: hidden;
+	visibility: hidden !important;
+}
+
+#userlist.sso-auth-user-list-loading+.loading {
+	height: 36px !important;
+	margin: 8px 0 0 !important;
+	visibility: visible !important;
+	position: relative;
+}
+
+#userlist.sso-auth-user-list-loading+.loading::after {
+	/* content: 'Loading users…'; */
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	color: #555;
+	font-size: 13px;
+}
+
+.loading+.sso-auth-user-pagination {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	justify-content: center;
+	margin: 8px 0 16px;
+}
+
+.sso-auth-user-pagination button {
+	min-width: 32px;
+}
+
+.sso-auth-user-page-status {
+	min-width: 145px;
+	text-align: center;
+}
