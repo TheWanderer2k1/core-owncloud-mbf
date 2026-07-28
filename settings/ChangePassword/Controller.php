@@ -56,6 +56,15 @@ class Controller {
 			if ($password !== null && \OC_User::setPassword($username, $password)) {
 				\OC::$server->getUserSession()->updateSessionTokenPassword($password);
 
+				// SSO password updates are already handled by the remote provider.
+				// A failing local SMTP server must not turn a successful remote
+				// password update into an error response. The client logs the user
+				// out immediately after receiving this success response.
+				if (self::isSsoUser($username)) {
+					\OC_JSON::success(['data' => ['logout' => true]]);
+					return;
+				}
+
 				self::sendNotificationMail($username);
 
 				\OC_JSON::success();
@@ -65,6 +74,19 @@ class Controller {
 		} catch (\Exception $e) {
 			\OC_JSON::error(['data' => ['message' => $e->getMessage()]]);
 		}
+	}
+
+	/**
+	 * @param string $username
+	 * @return bool
+	 */
+	private static function isSsoUser($username) {
+		$user = \OC::$server->getUserManager()->get($username);
+		$backend = \OC::$server->getUserManager()->getBackend('OCA\\SsoAuth\\UserBackend');
+
+		return $user !== null
+			&& $backend !== null
+			&& $user->getBackendClassName() === $backend->getBackendName();
 	}
 
 	public static function changeUserPassword($args) {

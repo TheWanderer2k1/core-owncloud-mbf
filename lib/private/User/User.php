@@ -442,7 +442,7 @@ class User implements IUser {
 		if ($backend === null) {
 			return false;
 		}
-		return ($backend instanceof IChangePasswordBackend || $backend->implementsActions(Backend::SET_PASSWORD)) && \get_class($backend) !== 'OCA\SsoAuth\UserBackend';
+		return $backend instanceof IChangePasswordBackend || $backend->implementsActions(Backend::SET_PASSWORD);
 	}
 
 	/**

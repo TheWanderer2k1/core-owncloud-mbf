@@ -102,5 +102,7 @@ class Application extends App {
         // page. Disabling sso_auth restores ownCloud's stock list behaviour.
         \OCP\Util::addScript('sso_auth', 'user-management-pagination');
         \OCP\Util::addStyle('sso_auth', 'user-management-pagination');
+        \OCP\Util::addScript('sso_auth', 'password-change');
+        \OCP\Util::addStyle('sso_auth', 'password-change');
     }
 }
