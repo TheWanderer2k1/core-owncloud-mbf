@@ -374,6 +374,12 @@
     "Automatic upgrading is not enabled in config.php. To upgrade your instance, please use the command line updater (occ upgrade)." : "Nâng cấp tự động không được bật trong config.php. Để nâng cấp, hãy sử dụng trình cập nhật dòng lệnh (occ upgrade).",
     "For help, see the  <a target=\"_blank\" rel=\"noreferrer\" href=\"%s\">documentation</a>." : "Để được trợ giúp, hãy xem <a target=\"_blank\" rel=\"noreferrer\" href=\"%s\">tài liệu</a>.",
     "This %s instance is currently in maintenance mode, which may take a while." : "Phiên bản %s này hiện đang ở chế độ bảo trì, có thể mất một lúc.",
-    "This page will refresh itself when the %s instance is available again." : "Trang này sẽ tự làm mới khi phiên bản %s khả dụng trở lại."
+    "This page will refresh itself when the %s instance is available again." : "Trang này sẽ tự làm mới khi phiên bản %s khả dụng trở lại.",
+    "Toggle password visibility" : "Hiện hoặc ẩn mật khẩu",
+    "Forgot password?" : "Quên mật khẩu?",
+    "Don't have an account yet?" : "Chưa có tài khoản?",
+    "Register now" : "Đăng ký ngay",
+    "Invalid email or password. Reset it?" : "Email hoặc mật khẩu không đúng. Đặt lại mật khẩu?",
+    "Invalid email or password." : "Email hoặc mật khẩu không đúng."
 },"pluralForm" :"nplurals=1; plural=0;"
 }
