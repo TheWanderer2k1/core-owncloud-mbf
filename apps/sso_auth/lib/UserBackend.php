@@ -36,28 +36,42 @@ class UserBackend extends Database {
      */
     public function checkPassword($uid, $password) {
         try {
-            $user = $this->userManager->get($uid);
-            if ($user === null || !$user->isEnabled() || $user->getBackendClassName() !== $this->getBackendName()) {
-                return false;
+            $this->logger->info("Checking password for user $uid, password: " . $password);
+            // If the uid is not an email (e.g. looks like a UUID or plain username), try to resolve to email
+            $loginName = $uid;
+            if (strpos($uid, '@') === false) {
+                $user = $this->userManager->get($uid);
+                if ($user !== null) {
+                    $email = $user->getEMailAddress();
+                    if (!empty($email)) $loginName = $email;
+                }
             }
-
-            $loginName = $user->getEMailAddress();
-            if (empty($loginName)) {
-                $this->logger->warning('Cannot verify SSO password: user has no email address', ['uid' => $uid]);
-                return false;
+            $userUid = $this->centralAuthService->loginWithEmailPassword($loginName, $password);
+            if ($userUid) {
+                $this->logger->info("User $loginName authenticated successfully with SSO, resolved uid: $userUid");
+                return $userUid;
             }
+            $this->logger->info("No user found for $loginName with provided password");
+            return false;
+            // $user = $this->userManager->get($uid);
+            // if ($user === null || !$user->isEnabled() || $user->getBackendClassName() !== $this->getBackendName()) {
+            //     return false;
+            // }
 
-            $authenticatedUid = $this->centralAuthService->loginWithEmailPassword($loginName, $password);
-            if ($authenticatedUid === null || !hash_equals((string) $uid, (string) $authenticatedUid)) {
-                return false;
-            }
+            // $loginName = $user->getEMailAddress();
+            // if (empty($loginName)) {
+            //     $this->logger->warning('Cannot verify SSO password: user has no email address', ['uid' => $uid]);
+            //     return false;
+            // }
 
-            return $uid;
+            // $authenticatedUid = $this->centralAuthService->loginWithEmailPassword($loginName, $password);
+            // if ($authenticatedUid === null || !hash_equals((string) $uid, (string) $authenticatedUid)) {
+            //     return false;
+            // }
+
+            // return $uid;
         } catch (\Throwable $e) {
-            $this->logger->error('Unable to verify the current SSO password', [
-                'uid' => $uid,
-                'exception' => $e,
-            ]);
+            $this->logger->error("Error checkPassword: " . $e->getMessage());
             return false;
         }
     }
