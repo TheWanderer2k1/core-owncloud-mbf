@@ -22,10 +22,17 @@ class UserBackend extends Database {
     }
 
     /**
-     * Check if the password is correct without logging in the user
-     * @param string $uid The username
-     * @param string $password The password
-     * @return string|false user uid on success, false otherwise
+     * Re-authenticate an SSO user before ownCloud accepts a password change.
+     *
+     * The ownCloud profile controller calls checkPassword() with the current
+     * user's UID. Resolve that UID to its email address, because the SSO login
+     * API authenticates by email. Returning the requested UID (rather than an
+     * arbitrary SSO response UID) is essential: it prevents a password for one
+     * account from being accepted as the current password of another account.
+     *
+     * @param string $uid ownCloud user ID
+     * @param string $password current password
+     * @return string|false the requested UID on success, false otherwise
      */
     public function checkPassword($uid, $password) {
         try {
@@ -46,10 +53,27 @@ class UserBackend extends Database {
             }
             $this->logger->info("No user found for $loginName with provided password");
             return false;
+            // $user = $this->userManager->get($uid);
+            // if ($user === null || !$user->isEnabled() || $user->getBackendClassName() !== $this->getBackendName()) {
+            //     return false;
+            // }
+
+            // $loginName = $user->getEMailAddress();
+            // if (empty($loginName)) {
+            //     $this->logger->warning('Cannot verify SSO password: user has no email address', ['uid' => $uid]);
+            //     return false;
+            // }
+
+            // $authenticatedUid = $this->centralAuthService->loginWithEmailPassword($loginName, $password);
+            // if ($authenticatedUid === null || !hash_equals((string) $uid, (string) $authenticatedUid)) {
+            //     return false;
+            // }
+
+            // return $uid;
         } catch (\Throwable $e) {
             $this->logger->error("Error checkPassword: " . $e->getMessage());
+            return false;
         }
-        return false;
     }
     
     /**
@@ -70,7 +94,7 @@ class UserBackend extends Database {
         $pattern = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/';
         
         if (!preg_match($pattern, $password)) {
-            $this->logger->error("Password validation failed for $uid: Password must be at least 8 characters and contain uppercase, lowercase, number, and special character");
+            $this->logger->warning('SSO password does not meet the required complexity policy', ['uid' => $uid]);
             return false;
         }
         

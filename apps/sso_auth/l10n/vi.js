@@ -82,6 +82,17 @@ OC.L10N.register(
     "Registration failed.": "Đăng ký thất bại.",
     "Registration successful. You can now log in.":
       "Đăng ký thành công. Bây giờ bạn có thể đăng nhập.",
+    "Changing password…": "Đang đổi mật khẩu…",
+    "Logging out…": "Đang đăng xuất…",
+    "Please provide the current and new password.":
+      "Vui lòng nhập mật khẩu hiện tại và mật khẩu mới.",
+    "Password must be at least 8 characters and contain uppercase, lowercase, number, and special character":
+      "Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt.",
+    "The new password cannot be the same as the previous one":
+      "Mật khẩu mới không được trùng với mật khẩu hiện tại.",
+    "Unable to change password": "Không thể thay đổi mật khẩu.",
+    "Password changed successfully. You will be logged out.":
+      "Đổi mật khẩu thành công. Bạn sẽ được đăng xuất.",
   },
   "nplurals=1; plural=0;",
 );

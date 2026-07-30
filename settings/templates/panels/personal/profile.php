@@ -118,7 +118,14 @@ if ($_['mailAddressChangeSupported']) {
 <?php
 if ($_['passwordChangeSupported']) {
 	script('jquery-showpassword'); ?>
-<form id="passwordform" class="section" autocapitalize="none">
+<?php
+$currentUser = \OC::$server->getUserSession()->getUser();
+$ssoBackend = \OC::$server->getUserManager()->getBackend('OCA\\SsoAuth\\UserBackend');
+$isSsoPasswordChange = $currentUser !== null
+	&& $ssoBackend !== null
+	&& $currentUser->getBackendClassName() === $ssoBackend->getBackendName();
+?>
+<form id="passwordform" class="section" autocapitalize="none" data-sso-auth-password-change="<?php p($isSsoPasswordChange ? 'true' : 'false'); ?>">
 	<h2 class="inlineblock"><?php p($l->t('Password')); ?></h2>
 	<div class="hidden icon-checkmark" id="password-changed"></div>
 	<div class="hidden msg error" id="password-error"><?php p($l->t('Unable to change your password')); ?></div>
@@ -135,16 +142,7 @@ if ($_['passwordChangeSupported']) {
 	<input type="checkbox" id="personal-show" name="show" /><label for="personal-show"></label>
 	<input id="passwordbutton" type="submit" value="<?php echo $l->t('Change password'); ?>" />
 </form>
-<?php
-} elseif (\OC::$server->getUserManager()->getBackend('OCA\SsoAuth\UserBackend') !== null) {
-?>
-<div id="passwordform" class="section">
-	<h2><?php p($l->t('Password')); ?></h2>
-	<p><?php p($l->t('Password is managed by your Single Sign-On provider: ')); ?><a href="https://auth-sso.mobifone.vn/" target="_blank"><?php p($l->t('MobiFone SSO')); ?></a></p>
-</div>
-<?php
-}
-?>
+<?php } ?>
 <form id="language" class="section">
 	<h2>
 		<label><?php p($l->t('Language'));?></label>

@@ -166,6 +166,12 @@ OC.L10N.register(
     "This ownCloud instance is currently in single user mode." : "OwnCloud trong trường hợp này đang ở chế độ người dùng duy nhất.",
     "This means only administrators can use the instance." : "Điều này có nghĩa chỉ có người quản trị có thể sử dụng trong trường hợp này.",
     "Contact your system administrator if this message persists or appeared unexpectedly." : "Liên hệ với người quản trị nếu lỗi này vẫn tồn tại hoặc xuất hiện bất ngờ.",
-    "Thank you for your patience." : "Cảm ơn sự kiên nhẫn của bạn."
+    "Thank you for your patience." : "Cảm ơn sự kiên nhẫn của bạn.",
+    "Toggle password visibility" : "Hiện hoặc ẩn mật khẩu",
+    "Forgot password?" : "Quên mật khẩu?",
+    "Don't have an account yet?" : "Chưa có tài khoản?",
+    "Register now" : "Đăng ký ngay",
+    "Invalid email or password. Reset it?" : "Email hoặc mật khẩu không đúng. Đặt lại mật khẩu?",
+    "Invalid email or password." : "Email hoặc mật khẩu không đúng."
 },
 "nplurals=1; plural=0;");

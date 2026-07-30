@@ -13,48 +13,50 @@ input#webdav {
 }
 
 .quota-bar {
-    position: relative;
-    width: 120px;
-    height: 32px;
-    background-color: #F0F0F0E6;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-top: 0px;
-    font-size: 13px;
-    line-height: 32px;
-    text-align: center;
-    border: 1px solid rgba(221, 221, 221, 0.9);
+	position: relative;
+	width: 120px;
+	height: 32px;
+	background-color: #F0F0F0E6;
+	border-radius: 4px;
+	overflow: hidden;
+	margin-top: 0px;
+	font-size: 13px;
+	line-height: 32px;
+	text-align: center;
+	border: 1px solid rgba(221, 221, 221, 0.9);
 }
 
 .quota-fill {
-    position: absolute;
-    left: 0;
-    top: 0;
-    height: 100%;
-    width: 0;
-    background-color: #555555;
-    transition: width 0.5s ease-in-out;
+	position: absolute;
+	left: 0;
+	top: 0;
+	height: 100%;
+	width: 0;
+	background-color: #555555;
+	transition: width 0.5s ease-in-out;
 }
 
 .quota-text {
-    position: relative;
-    z-index: 1;
-    color: #000;
-    font-weight: 600;
+	position: relative;
+	z-index: 1;
+	color: #000;
+	font-weight: 600;
 }
 
 .group-quota-info {
-  font-size: 90%;
-  color: #666;
-  margin-left: 6px;
-  white-space: nowrap;
+	font-size: 90%;
+	color: #666;
+	margin-left: 6px;
+	white-space: nowrap;
 }
-.groupname, .group-quota-info {
-  display: inline-block;
-  max-width: 60%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  vertical-align: middle;
+
+.groupname,
+.group-quota-info {
+	display: inline-block;
+	max-width: 60%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	vertical-align: middle;
 }
 
 
@@ -221,21 +223,30 @@ table.nostyle td {
 }
 
 /* USERS */
-#newgroup-init a span { margin-left: 20px; }
+#newgroup-init a span {
+	margin-left: 20px;
+}
+
 #newgroup-init a span:before {
-	position: absolute;	left: 12px; top:-2px;
-	content: '+'; font-weight: bold; font-size: 150%;
+	position: absolute;
+	left: 12px;
+	top: -2px;
+	content: '+';
+	font-weight: bold;
+	font-size: 150%;
 }
 
 #newgroup-form {
 	height: 44px;
 }
+
 #newgroupname {
 	margin: 6px;
 	width: 95%;
 	padding-right: 32px;
 	box-sizing: border-box
 }
+
 #newgroup-form .button {
 	position: absolute;
 	right: 0;
@@ -250,66 +261,132 @@ table.nostyle td {
 	text-overflow: ellipsis;
 	float: left;
 }
+
 .isgroup.active .groupname {
 	max-width: 80%;
 }
 
 li.active span.utils .delete,
 li:hover span.utils .delete {
-	float: left; position: relative; opacity: 0.5;
-	top: -7px; left: 7px; width: 44px; height: 44px;
+	float: left;
+	position: relative;
+	opacity: 0.5;
+	top: -7px;
+	left: 7px;
+	width: 44px;
+	height: 44px;
 }
 
 li.active span.utils .rename,
 li:hover span.utils .rename {
 	padding: 8px 14px 20px 14px;
-	top: 0px; position: absolute; width: 16px; height: 16px;
+	top: 0px;
+	position: absolute;
+	width: 16px;
+	height: 16px;
 	opacity: 0.5;
 	display: inline-block !important;
 }
 
 li.active span.utils .delete img,
-li:hover span.utils .delete img { margin: 14px; }
+li:hover span.utils .delete img {
+	margin: 14px;
+}
 
 li.active .rename,
-li:hover .rename { opacity: 0.5; }
+li:hover .rename {
+	opacity: 0.5;
+}
 
-li:hover span.utils .delete:hover, li.active .rename:hover { opacity: 1; }
+li:hover span.utils .delete:hover,
+li.active .rename:hover {
+	opacity: 1;
+}
 
-span.utils .delete, .rename { display: none; }
+span.utils .delete,
+.rename {
+	display: none;
+}
 
-#app-navigation ul li.active > span.utils .delete,
-#app-navigation ul li:hover > span.utils .delete,
-#app-navigation ul li:hover > span.utils .delete,
-#app-navigation ul li:hover > span.utils .rename { display: block; }
+#app-navigation ul li.active>span.utils .delete,
+#app-navigation ul li:hover>span.utils .delete,
+#app-navigation ul li:hover>span.utils .delete,
+#app-navigation ul li:hover>span.utils .rename {
+	display: block;
+}
+
 #usersearchform {
 	position: absolute;
 	top: 2px;
 	right: 0;
 }
+
 #usersearchform input {
 	width: 150px;
 }
-#usersearchform label { font-weight: 700; }
+
+#usersearchform label {
+	font-weight: 700;
+}
 
 /* display table at full width */
 table.grid {
 	width: 100%;
 }
 
-table.grid th { height:2em; color:#999; }
-table.grid th, table.grid td { border-bottom:1px solid #ddd; padding:0 .5em; padding-left:.8em; text-align:left; font-weight:normal; }
-td.name, td.password { padding-left:.8em; }
-td.password>img,td.displayName>img, td.remove>a, td.quota>img { visibility:hidden; }
-td.password, td.quota, td.displayName { width:12em; cursor:pointer; }
-td.password>span, td.quota>span, rd.displayName>span { margin-right: 1.2em; color: #C7C7C7; }
-span.usersCreationTimeTooltip { white-space: nowrap; }
-span.usersLastLoginTooltip { white-space: nowrap; }
+table.grid th {
+	height: 2em;
+	color: #999;
+}
+
+table.grid th,
+table.grid td {
+	border-bottom: 1px solid #ddd;
+	padding: 0 .5em;
+	padding-left: .8em;
+	text-align: left;
+	font-weight: normal;
+}
+
+td.name,
+td.password {
+	padding-left: .8em;
+}
+
+td.password>img,
+td.displayName>img,
+td.remove>a,
+td.quota>img {
+	visibility: hidden;
+}
+
+td.password,
+td.quota,
+td.displayName {
+	width: 12em;
+	cursor: pointer;
+}
+
+td.password>span,
+td.quota>span,
+rd.displayName>span {
+	margin-right: 1.2em;
+	color: #C7C7C7;
+}
+
+span.usersCreationTimeTooltip {
+	white-space: nowrap;
+}
+
+span.usersLastLoginTooltip {
+	white-space: nowrap;
+}
 
 /* dropdowns will be relative to this element */
 #userlist {
 	position: relative;
 }
+
 #userlist .password,
 #userlist .quota,
 #userlist .mailAddress,
@@ -317,10 +394,11 @@ span.usersLastLoginTooltip { white-space: nowrap; }
 #userlist .storageLocation,
 #userlist .userBackend,
 #userlist .creationTime {
-         display : none;
+	display: none;
 }
+
 #userlist .lastLogin {
-	display : none;
+	display: none;
 }
 
 /* because of accessibility the name cell is <th> - therefore we enforce the black color */
@@ -349,44 +427,81 @@ span.usersLastLoginTooltip { white-space: nowrap; }
 	display: none;
 }
 
-tr:hover>td.password>span, tr:hover>td.displayName>span { margin:0; cursor:pointer; }
-tr:hover>td.remove>a, tr:hover>td.password>img,tr:hover>td.displayName>img, tr:hover>td.quota>img { visibility:visible; cursor:pointer; }
+tr:hover>td.password>span,
+tr:hover>td.displayName>span {
+	margin: 0;
+	cursor: pointer;
+}
+
+tr:hover>td.remove>a,
+tr:hover>td.password>img,
+tr:hover>td.displayName>img,
+tr:hover>td.quota>img {
+	visibility: visible;
+	cursor: pointer;
+}
+
 td.remove {
 	width: 25px;
 }
+
 tr:hover>td.remove>a {
 	float: left;
 }
 
-div.recoveryPassword { left:50em; display:block; position:absolute; top:-1px; }
-input#recoveryPassword {width:15em;}
+div.recoveryPassword {
+	left: 50em;
+	display: block;
+	position: absolute;
+	top: -1px;
+}
+
+input#recoveryPassword {
+	width: 15em;
+}
+
 #controls select.quota {
 	margin: 3px;
 	margin-right: 10px;
 	height: 37px;
 }
-select.quota-user { position:relative; left:0; top:0; width:10em; }
-select.quota.active { background: #fff; }
 
-input.userFilter {width: 200px;}
+select.quota-user {
+	position: relative;
+	left: 0;
+	top: 0;
+	width: 10em;
+}
+
+select.quota.active {
+	background: #fff;
+}
+
+input.userFilter {
+	width: 200px;
+}
 
 /* positioning fixes */
 #newuser {
 	padding-left: 3px;
 }
+
 #newuser .multiselect {
 	min-width: 150px !important;
 }
+
 #newuser .multiselect,
-#newusergroups + input[type='submit'] {
+#newusergroups+input[type='submit'] {
 	position: relative;
 	top: -1px;
 }
+
 #headerGroups,
 #headerSubAdmins,
 #headerQuota {
 	padding-left: 18px;
 }
+
 #headerAvatar {
 	width: 32px;
 }
@@ -548,6 +663,7 @@ span.version {
 #app-category-1 {
 	margin-bottom: 18px;
 }
+
 /* capitalize "Other" category */
 #app-category-925 {
 	text-transform: capitalize;
@@ -720,9 +836,9 @@ span.indeterminate {
 /* PASSWORD */
 .strengthify-wrapper {
 	position: absolute;
-	left: 189px;
-	width: 131px;
-	margin-top: -7px;
+	left: 173px;
+	width: 140px;
+	margin-top: -1px;
 }
 
 /* OPERA hack for strengthify*/
@@ -741,7 +857,7 @@ doesnotexist:-o-prefocus {
 
 #postsetupchecks .errors,
 #postsetupchecks .warnings,
-#security-warning > ul {
+#security-warning>ul {
 	color: #ce3702;
 }
 
@@ -770,39 +886,39 @@ doesnotexist:-o-prefocus {
 /**
  * Icons for settings sections
  */
-li > a.icon-search {
+li>a.icon-search {
 	background-image: url("../../core/img/actions/search.svg");
 }
 
-li > a.icon-shared {
+li>a.icon-shared {
 	background-image: url("../../core/img/actions/shared.svg");
 }
 
-li > a.icon-folder {
+li>a.icon-folder {
 	background-image: url("../../core/img/filetypes/folder.svg");
 }
 
-li > a.icon-list {
+li>a.icon-list {
 	background-image: url("../../core/img/actions/menu.svg");
 }
 
-li > a.icon-password {
+li>a.icon-password {
 	background-image: url("../../core/img/actions/password.svg");
 }
 
-li > a.icon-more {
+li>a.icon-more {
 	background-image: url("../../core/img/actions/more.svg");
 }
 
-li > a.icon-upload {
+li>a.icon-upload {
 	background-image: url("../../core/img/actions/upload.svg");
 }
 
-li > a.icon-user {
+li>a.icon-user {
 	background-image: url("../../core/img/actions/user.svg");
 }
 
-li > a.icon-workflows {
+li>a.icon-workflows {
 	background-image: url("../../core/img/actions/play-next.svg");
 }
 
@@ -810,7 +926,7 @@ li > a.icon-workflows {
 	background: none;
 }
 
-li > a.icon-settings {
+li>a.icon-settings {
 	background-image: url("../../core/img/actions/settings.svg");
 }
 
