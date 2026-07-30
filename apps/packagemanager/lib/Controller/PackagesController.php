@@ -231,15 +231,17 @@ class PackagesController extends Controller {
 				$countStmt->closeCursor();
 
 				// Data with search + pagination
-				$dataSql = 'SELECT * FROM `*PREFIX*packagemanager_subscription_history`'
-					. ' WHERE `user_id` LIKE ?'
-					. ' OR `package_name` LIKE ?'
-					. ' OR `package_code` LIKE ?'
-					. ' OR `action_type` LIKE ?'
-					. ' ORDER BY `created_at` DESC'
+				$dataSql = 'SELECT h.*, u.displayname FROM `*PREFIX*packagemanager_subscription_history` AS h'
+					. ' LEFT JOIN `*PREFIX*users` AS u ON h.user_id = u.uid'
+					. ' WHERE h.user_id LIKE ?'
+					. ' OR h.package_name LIKE ?'
+					. ' OR h.package_code LIKE ?'
+					. ' OR h.action_type LIKE ?'
+					. ' OR u.displayname LIKE ?'
+					. ' ORDER BY h.created_at DESC'
 					. ' LIMIT ? OFFSET ?';
 				$dataStmt = $db->prepare($dataSql);
-				$dataStmt->execute([$like, $like, $like, $like, $limit, $offset]);
+				$dataStmt->execute([$like, $like, $like, $like, $like, $limit, $offset]);
 			} else {
 				// Count all
 				$countSql = 'SELECT COUNT(*) as total FROM `*PREFIX*packagemanager_subscription_history`';
@@ -249,8 +251,9 @@ class PackagesController extends Controller {
 				$countStmt->closeCursor();
 
 				// Data with pagination only
-				$dataSql = 'SELECT * FROM `*PREFIX*packagemanager_subscription_history`'
-					. ' ORDER BY `created_at` DESC'
+				$dataSql = 'SELECT h.*, u.displayname FROM `*PREFIX*packagemanager_subscription_history` AS h'
+					. ' LEFT JOIN `*PREFIX*users` AS u ON h.user_id = u.uid'
+					. ' ORDER BY h.created_at DESC'
 					. ' LIMIT ? OFFSET ?';
 				$dataStmt = $db->prepare($dataSql);
 				$dataStmt->execute([$limit, $offset]);
