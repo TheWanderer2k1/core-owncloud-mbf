@@ -51,6 +51,7 @@ $l = $_['l'];
 		<thead>
 			<tr>
 				<th class="history-col"><?php p($l->t('User')); ?></th>
+				<th class="history-col"><?php p($l->t('Display Name')); ?></th>
 				<th class="history-col"><?php p($l->t('Action')); ?></th>
 				<th class="history-col"><?php p($l->t('Package name')); ?></th>
 				<th class="history-col"><?php p($l->t('Code')); ?></th>

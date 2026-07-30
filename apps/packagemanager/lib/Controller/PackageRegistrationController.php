@@ -444,7 +444,7 @@ class PackageRegistrationController extends Controller {
             // create Drive user with sso id as uid
             $driveUser = $this->userManager->get($ssoId);
             if (!$driveUser) {
-                $driveUser = $this->createDriveUserFromSSOId($ssoId);
+                $driveUser = $this->createDriveUserFromSSOId($ssoId, null, $phoneNumber);
                 if (!$driveUser) {
                     throw new \Exception("Failed to create Drive user for SSO id $ssoId");
                 }
@@ -700,7 +700,7 @@ class PackageRegistrationController extends Controller {
         }
     }
 
-    private function createDriveUserFromSSOId(string $ssoId, string $email = null): ?\OCP\IUser {
+    private function createDriveUserFromSSOId(string $ssoId, string $email = null, string $phoneNumber = null): ?\OCP\IUser {
         try {
             $randomPassword = \OC::$server->getSecureRandom()->generate(10); // generate random password here, user should login via SSO account only
             $userBackend = $this->userManager->getBackend('OCA\SsoAuth\UserBackend');
@@ -715,6 +715,8 @@ class PackageRegistrationController extends Controller {
             if ($email) {
                 $newUser->setEmailAddress($email);
                 $newUser->setDisplayName($email);
+            } elseif ($phoneNumber) {
+                $newUser->setDisplayName($phoneNumber);
             }
             $newUser->setQuota($this->config->getSystemValue('default_user_quota', '15 GB'));
             $defaultGroup = \OC::$server->getGroupManager()->get('default'); // default group must exist first

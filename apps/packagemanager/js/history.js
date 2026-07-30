@@ -154,6 +154,9 @@
               escapeHtml(row.user_id || "-") +
               "</td>" +
               '<td class="history-cell">' +
+              escapeHtml(row.displayname || "-") +
+              "</td>" +
+              '<td class="history-cell">' +
               actionBadge +
               "</td>" +
               '<td class="history-cell">' +
