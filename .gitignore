@@ -46,6 +46,10 @@
 !/apps/packagemanager/**
 /apps/packagemanager/vendor/
 
+!/apps/news
+!/apps/news/**
+/apps/news/vendor/
+
 /lib/composer
 /apps/files_external/3rdparty/*
 

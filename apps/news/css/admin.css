@@ -1,0 +1,37 @@
+.wysiwyg-toolbar {
+    margin-bottom: 6px;
+}
+
+.wysiwyg-btn {
+    margin-right: 4px;
+    font-weight: bold;
+    background: #f2f2f2;
+    border: 1px solid #ccc;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.wysiwyg-btn:hover {
+    background: #e8e8e8;
+}
+
+.wysiwyg-editor {
+    min-height: 150px;
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 3px;
+    background: #fff;
+    overflow: auto;
+}
+
+.wysiwyg-source {
+    display: none;
+}
+
+#news-form .form-group {
+    margin-bottom: 18px;
+}
+
+#news-form button[type="submit"] {
+    margin-top: 10px;
+}
