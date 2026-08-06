@@ -12,5 +12,10 @@ return [
             'url'  => '/save',
             'verb' => 'POST'
         ],
+        [
+            'name' => 'config#upload',
+            'url'  => '/upload',
+            'verb' => 'POST'
+        ],
     ]
 ];

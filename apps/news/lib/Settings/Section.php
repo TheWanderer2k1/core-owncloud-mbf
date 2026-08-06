@@ -17,7 +17,7 @@ class Section implements ISection
     }
 
     public function getName() {
-        return $this->l->t('Quản lý tin tức');
+        return $this->l->t('News management');
     }
 
     public function getPriority() {

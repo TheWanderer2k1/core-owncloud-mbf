@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Quản lý tin tức</title>
+    <title>News management</title>
     <style>
         body{font-family: "Helvetica Neue", Arial, sans-serif; margin:20px; color:#333}
         .panel{border:1px solid #e6e6e6;padding:18px;border-radius:4px;background:#fff}
@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
-    <h2>Quản lý tin tức</h2>
+    <h2>News management</h2>
     <div class="panel">
         <form method="post">
             <div class="row">
