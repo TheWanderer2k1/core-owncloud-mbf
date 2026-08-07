@@ -84,4 +84,23 @@ class FaqController extends Controller {
             return new DataResponse(['error' => $e->getMessage()], 400);
         }
     }
+
+    /**
+     * @PublicPage
+     * @NoCSRFRequired
+     */
+    public function publish(): DataResponse {
+        $faqs = $this->mapper->findActive();
+        $result = [];
+        foreach ($faqs as $faq) {
+            $result[] = [
+                'id' => $faq->getId(),
+                'question' => $faq->getQuestion(),
+                'answer' => $faq->getAnswer(),
+                'updated_by' => $faq->getUpdatedBy(),
+                'updated_date' => $faq->getUpdatedDate()
+            ];
+        }
+        return new DataResponse($result);
+    }
 }

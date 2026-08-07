@@ -21,4 +21,9 @@ class FaqMapper extends Mapper {
         $sql = 'SELECT * FROM ' . $this->getTableName() . ' ORDER BY id DESC';
         return $this->findEntities($sql);
     }
+
+    public function findActive(): array {
+        $sql = 'SELECT * FROM ' . $this->getTableName() . ' WHERE status = ? ORDER BY id DESC';
+        return $this->findEntities($sql, [1]);
+    }
 }

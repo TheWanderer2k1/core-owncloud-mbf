@@ -22,5 +22,10 @@ return [
             'url'  => '/delete',
             'verb' => 'POST'
         ],
+        [
+            'name' => 'faq#publish',
+            'url'  => '/publish',
+            'verb' => 'GET'
+        ],
     ]
 ];
