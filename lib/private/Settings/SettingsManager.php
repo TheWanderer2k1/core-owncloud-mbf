@@ -219,6 +219,7 @@ class SettingsManager implements ISettingsManager {
 				new Section('sso_auth', $this->l->t('SSO Authentication'), -11, 'shield'),
 				new Section('packagemanager-config', $this->l->t('CBS Configuration'), -12, 'settings'),
 				new Section('news', $this->l->t('News Management'), -13, 'folder'),
+				new Section('faq', $this->l->t('FAQ Management'), -14, 'folder'),
 			];
 		} elseif ($type === 'personal') {
 			return [

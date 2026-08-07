@@ -58,9 +58,40 @@ class ConfigController extends Controller {
 
         if (move_uploaded_file($file['tmp_name'], $targetPath)) {
             $url = \OC::$server->getURLGenerator()->linkTo('news', 'uploads/' . $filename);
-            return new DataResponse(['url' => $url]);
+            $absoluteUrl = \OC::$server->getURLGenerator()->getAbsoluteURL($url);
+            return new DataResponse(['url' => $absoluteUrl]);
         }
 
         return new DataResponse(['error' => ['message' => 'Failed to save uploaded file']], 500);
+    }
+
+    /**
+     * @PublicPage
+     * @NoCSRFRequired
+     */
+    public function publish(): DataResponse {
+        $intro = $this->config->getAppValue('news', 'intro', 'Giới thiệu về MobiFone Drive');
+        $terms = $this->config->getAppValue('news', 'terms', 'Điều khoản');
+        $policy = $this->config->getAppValue('news', 'policy', 'Chính sách bảo mật');
+
+        $baseUrl = \OC::$server->getURLGenerator()->getAbsoluteURL('/');
+        $baseUrl = rtrim($baseUrl, '/');
+
+        $intro = $this->makeUrlsAbsolute($intro, $baseUrl);
+        $terms = $this->makeUrlsAbsolute($terms, $baseUrl);
+        $policy = $this->makeUrlsAbsolute($policy, $baseUrl);
+
+        $parameters = [
+            'intro' => $intro,
+            'terms' => $terms,
+            'policy' => $policy
+        ];
+        return new DataResponse($parameters);
+    }
+
+    private function makeUrlsAbsolute(string $html, string $baseUrl): string {
+        $html = str_replace('src="/apps/news/uploads/', 'src="' . $baseUrl . '/apps/news/uploads/', $html);
+        $html = str_replace("src='/apps/news/uploads/", "src='" . $baseUrl . "/apps/news/uploads/", $html);
+        return $html;
     }
 }

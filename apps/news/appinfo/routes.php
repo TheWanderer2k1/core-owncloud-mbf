@@ -17,5 +17,10 @@ return [
             'url'  => '/upload',
             'verb' => 'POST'
         ],
+        [
+            'name' => 'config#publish',
+            'url'  => '/publish',
+            'verb' => 'GET'
+        ],
     ]
 ];
