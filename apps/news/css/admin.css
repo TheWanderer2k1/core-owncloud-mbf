@@ -1,0 +1,131 @@
+.wysiwyg-toolbar {
+    margin-bottom: 6px;
+}
+
+.wysiwyg-btn {
+    margin-right: 4px;
+    font-weight: bold;
+    background: #f2f2f2;
+    border: 1px solid #ccc;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.wysiwyg-btn:hover {
+    background: #e8e8e8;
+}
+
+.wysiwyg-editor {
+    min-height: 150px;
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 3px;
+    background: #fff;
+    overflow: auto;
+}
+
+.wysiwyg-source {
+    display: none;
+}
+
+/* #news-form {
+    position: relative;
+    padding-top: 20px;
+} */
+
+#news-form .form-group {
+    margin-bottom: 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#app-content {
+    overflow: hidden;
+}
+
+.section {
+    height: 90vh;
+    /* Chiều cao bằng màn hình */
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group:first-child {
+    flex-shrink: 0;
+    /* Header không co lại */
+}
+
+.content {
+    flex: 1;
+    /* Chiếm toàn bộ phần còn lại */
+    overflow-y: auto;
+    /* Chỉ scroll phần này */
+    box-sizing: border-box;
+
+    border: 1px solid #b3b3b3;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.content h4 {
+    margin: 10px 0;
+}
+
+.ck.ck-reset.ck-editor.ck-rounded-corners {
+    width: 100%;
+}
+
+/* #news-save {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    padding: 7px 20px;
+    background-color: #0082c9;
+    color: #fff;
+    border: 1px solid #0082c9;
+    border-radius: 3px;
+    cursor: pointer;
+    font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+} */
+
+/* #news-save:hover {
+    background-color: #006fa8;
+    border-color: #006fa8;
+} */
+
+/* #news-save:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+} */
+
+/* Spinner for loading state */
+#news-save.loading::after {
+    /* content: ""; */
+    display: none;
+    width: 14px;
+    height: 14px;
+    margin-left: 8px;
+    border: 2px solid #fff;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin-loading 0.8s linear infinite;
+}
+
+/* @keyframes spin-loading {
+    to {
+        transform: rotate(360deg);
+    }
+} */
+
+/* CKEditor 5 custom styling */
+/* .ck-editor__editable_inline {
+    min-height: 200px;
+    background: #fff;
+    color: #333;
+} */
