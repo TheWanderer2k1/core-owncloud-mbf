@@ -18,6 +18,7 @@
 
 # ignore all apps except core ones
 /apps*/*
+!/apps/current_package
 !/apps/comments
 !/apps/dav
 !/apps/files
