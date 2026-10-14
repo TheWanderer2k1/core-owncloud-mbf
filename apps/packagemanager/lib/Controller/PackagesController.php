@@ -277,5 +277,52 @@ class PackagesController extends Controller {
 			], 500);
 		}
 	}
+
+
+	/**
+	 * @NoAdminRequired
+     * @PublicPage
+     * @NoCSRFRequired
+	 * Get all packages, but sorted by subscription count
+	 */
+	public function getPublished() {
+		try {
+            $sql = 'SELECT p.*, COALESCE(sub.subscription_count, 0) AS subscription_count
+                    FROM *PREFIX*packagemanager_packages p
+                    LEFT JOIN (
+                        SELECT package_id, COUNT(*) AS subscription_count
+                        FROM *PREFIX*packagemanager_subscription_status
+                        GROUP BY package_id
+                    ) sub ON p.id = sub.package_id
+                    ORDER BY subscription_count DESC';
+
+            $result = $this->db->executeQuery($sql);
+			$data = $result->fetchAll();
+
+            $isFirst = true;
+            foreach ($data as &$row) {
+                // stopgap measure to match landing page expectation
+                if (empty($row['description'])) {
+                    $row['description'] = 'Placeholder';
+                }
+
+                // remove the sort field
+                unset($row['subscription_count']);
+
+                // set the popular package
+                $row['isPopular'] = $isFirst;
+                if ($isFirst) $isFirst = false ;
+            }
+            unset($row);
+                        
+			return new DataResponse($data);
+		} catch (\Exception $e) {
+			return new DataResponse([
+				'status' => 'error',
+				'message' => $e->getMessage()
+			], 500);
+		}
+	}
+	
 }
 

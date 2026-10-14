@@ -19,6 +19,9 @@ return [
 		['name' => 'packages#update', 'url' => '/api/packages/{id}', 'verb' => 'PUT'],
 		['name' => 'packages#destroy', 'url' => '/api/packages/{id}', 'verb' => 'DELETE'],
 
+        // API get published package
+		['name' => 'packages#get_published', 'url' => '/publish', 'verb' => 'GET'],
+
 		// API package registration for AM/KAM flow
 		['name' => 'package_registration#register_amkam', 'url' => '/api/internal/register', 'verb' => 'POST'],
 
