@@ -1,0 +1,26 @@
+<?php
+
+return [
+    'routes' => [
+        [
+            'name' => 'config#index',
+            'url'  => '/',
+            'verb' => 'GET'
+        ],
+        [
+            'name' => 'config#save',
+            'url'  => '/save',
+            'verb' => 'POST'
+        ],
+        [
+            'name' => 'config#upload',
+            'url'  => '/upload',
+            'verb' => 'POST'
+        ],
+        [
+            'name' => 'config#publish',
+            'url'  => '/publish',
+            'verb' => 'GET'
+        ],
+    ]
+];

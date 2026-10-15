@@ -1,0 +1,9 @@
+This is installed in owncloud as an app of type theme.
+
+It is less about making a custom theme in owncloud, but more about modifying
+owncloud behaviour within the extent of a theme app. The main purpose of this
+app is to modify the login page of owncloud to match the desired login
+workflow: login on the landing page, which login directly to owncloud; if
+success, then redirect to owncloud files page; if fail, the login page again
+
+The shiny, pre-login web frontend is in another repo, by another dev.

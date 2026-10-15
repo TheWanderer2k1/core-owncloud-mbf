@@ -1,0 +1,62 @@
+#body-login {
+    /* background-image: url("../img/background.jpg"); */
+    /* background-position: center; */
+    /* background-repeat: no-repeat; */
+    /* background-size: cover; */
+    /* background-color: lab(100% 0 0); */
+    /* color: black; */
+
+    background-image: radial-gradient(circle at 0 0, #0055a526, #0000 36%), radial-gradient(circle at 100% 100%, #0070c01f, #0000 32%);
+    background-color: teal;
+    height: 100%;
+    display: flex;
+    justify-content: center; /* Centers horizontally */
+    align-items: center;     /* Centers vertically */
+}
+
+#body-login form label {
+    color: black !important;
+}
+
+#body-login .login-banner-side {
+    display: none;
+    color: white;
+}
+
+
+#body-login .wrapper {
+    background-color: blue;
+    /* margin: 0 auto -70px; */
+    margin: 0;
+    width: 100%;
+    min-height: unset;
+    display: flex;
+    justify-content: center; /* Centers horizontally */
+    align-items: center;     /* Centers vertically */
+    /* height: 100%; */
+    display: flex;
+}
+
+#body-login .login-form {
+    flex: 4;
+    border: black solid 3px;
+}
+
+#body-login .login-banner-side {
+    flex: 3;
+}
+
+html.ng-csp body#body-login.theme-Mobidrive.has-theme div.wrapper div.v-align form div.submit-wrap button#submit.login-button {
+    color: black;
+}
+
+@media (min-width: 1024px) {
+    #body-login .wrapper {
+        min-width: calc(1200px + 4rem);
+        max-width: calc(1200px + 4rem);
+    }
+
+    #body-login .login-banner-side {
+        display: block;
+    }
+}

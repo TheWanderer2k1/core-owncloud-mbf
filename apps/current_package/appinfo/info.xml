@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<info>
+  <id>current_package</id>
+  <name>Current Package</name>
+  <description>Simple app that display the current package that the user has registered</description>
+  <author>Mofifone</author>
+  <version>1.0.0</version>
+  <namespace>CurrentPackage</namespace>
+  <dependencies>
+    <owncloud min-version="10.0" max-version="10.99" />
+  </dependencies>
+  <settings>
+      <personal>OCA\CurrentPackage\Panel</personal>
+  </settings>
+</info>

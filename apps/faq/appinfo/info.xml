@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<info>
+    <id>faq</id>
+    <name>FAQ Management</name>
+    <description>App to manage Frequently Asked Questions</description>
+    <version>1.0.0</version>
+    <licence>agpl</licence>
+    <author>MobiFone IT</author>
+    <namespace>FAQ</namespace>
+    <dependencies>
+        <owncloud min-version="10" max-version="11"/>
+    </dependencies>
+    <settings>
+        <section>OCA\FAQ\Settings\Section</section>
+        <admin>OCA\FAQ\Settings\Admin</admin>
+    </settings>
+</info>

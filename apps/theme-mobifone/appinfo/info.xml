@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<info>
+	<id>theme-mobifone</id>
+	<name>Mobifone Theme</name>
+	<description>This app modify owncloud within an extent of a theme app</description>
+	<licence>AGPL</licence>
+	<author>Mobifone</author>
+	<version>1.0.0</version>
+	<types>
+		<theme/>
+	</types>
+	<dependencies>
+		<owncloud min-version="10" max-version="10" />
+	</dependencies>
+	<namespace>Theme</namespace>
+</info>

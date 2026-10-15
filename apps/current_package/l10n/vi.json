@@ -1,0 +1,19 @@
+{ "translations": {
+    "Status" : "Trạng thái",
+    "Registration Date" : "Ngày đăng kí",
+    "Expire Date" : "Ngày hết hạn",
+    "Package Name" : "Tên gói cước",
+    "Quota" : "Hạn mức",
+    "Active" : "Đã kích hoạt",
+    "Cancel" : "Đã hủy",
+    "Expired" : "Đã hết hạn",
+    "Price" : "Giá gói cước",
+    "Duration" : "Thời gian hiệu lực",
+    "day" : "ngày",
+    "days" : "ngày",
+    "month" : "tháng",
+    "months" : "tháng",
+    "since registration date" : "kể từ ngày đăng kí",
+    "Current Data Package" : "Gói cước dữ liệu hiện tại",
+    "You have not registered any package": "Bạn hiện không đăng kí gói cước nào"
+}, "pluralForm" : "nplurals=1; plural=0;" }
