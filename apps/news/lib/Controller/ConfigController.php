@@ -81,10 +81,18 @@ class ConfigController extends Controller {
         $terms = $this->makeUrlsAbsolute($terms, $baseUrl);
         $policy = $this->makeUrlsAbsolute($policy, $baseUrl);
 
+        // Parse the <ol> and <li> HTML to an array whose elements that are
+        // strutured to match landing page expectation
+        $terms = $this->htmllistToArray($terms);
+        $policy = $this->htmllistToArray($policy);
+
+        // Conflict in naming: what is 'policy' on owncloud is 'privacy' in the
+        // landing page. Moveover, to the landing page, the term 'policy'
+        // consist of both 'terms' and 'privacy'. For now, owncloud yield
         $parameters = [
             'intro' => $intro,
             'terms' => $terms,
-            'policy' => $policy
+            'privacy' => $policy // I yield
         ];
         return new DataResponse($parameters);
     }
@@ -93,5 +101,33 @@ class ConfigController extends Controller {
         $html = str_replace('src="/apps/news/uploads/', 'src="' . $baseUrl . '/apps/news/uploads/', $html);
         $html = str_replace("src='/apps/news/uploads/", "src='" . $baseUrl . "/apps/news/uploads/", $html);
         return $html;
+    }
+
+
+    private function htmllistToArray(string $html): array {
+        $dom = new \DOMDocument();
+        @$dom->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'), LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        $items = [];
+        $liElements = $dom->getElementsByTagName('li');
+
+        foreach ($liElements as $li) {
+            $text = trim($li->nodeValue);
+
+            $parts = explode(':', $text, 2);
+            
+            if (count($parts) === 2) {
+                $items[] = [
+                    'title' => trim($parts[0]),
+                    'content' => trim($parts[1])
+                ];
+            } else {
+                $items[] = [
+                    'title' => '',
+                    'content' => trim($text)
+                ];
+            }
+        }
+
+        return $items;
     }
 }
