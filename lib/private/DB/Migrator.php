@@ -27,9 +27,8 @@
 
 namespace OC\DB;
 
-use \Doctrine\DBAL\DBALException;
-use \Doctrine\DBAL\Schema\Index;
-use \Doctrine\DBAL\Schema\Table;
+use Doctrine\DBAL\Schema\AbstractAsset;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use \Doctrine\DBAL\Schema\Schema;
 use \Doctrine\DBAL\Schema\Comparator;
 use Doctrine\DBAL\Types\StringType;
@@ -97,6 +96,14 @@ class Migrator {
 		return $script;
 	}
 
+	public function filterSchemaAsset($asset): bool {
+		if ($asset instanceof AbstractAsset) {
+			$asset = $asset->getName();
+		}
+		$prefix = $this->config->getSystemValue('dbtableprefix', 'oc_');
+		return str_starts_with($asset, $prefix);
+	}
+
 	/**
 	 * Create a unique name for the temporary table
 	 *
@@ -107,35 +114,10 @@ class Migrator {
 		return $this->config->getSystemValue('dbtableprefix', 'oc_') . $name . '_' . $this->random->generate(13, ISecureRandom::CHAR_LOWER . ISecureRandom::CHAR_DIGITS);
 	}
 
-	/**
-	 * @param \Doctrine\DBAL\Schema\Table $table
-	 * @param string $newName
-	 * @return \Doctrine\DBAL\Schema\Table
-	 */
-	protected function renameTableSchema(Table $table, $newName) {
-		/**
-		 * @var \Doctrine\DBAL\Schema\Index[] $indexes
-		 */
-		$indexes = $table->getIndexes();
-		$newIndexes = [];
-		foreach ($indexes as $index) {
-			if ($index->isPrimary()) {
-				// do not rename primary key
-				$indexName = $index->getName();
-			} else {
-				// avoid conflicts in index names
-				$indexName = $this->config->getSystemValue('dbtableprefix', 'oc_') . $this->random->generate(13, ISecureRandom::CHAR_LOWER);
-			}
-			$newIndexes[] = new Index($indexName, $index->getColumns(), $index->isUnique(), $index->isPrimary());
-		}
-
-		// foreign keys are not supported so we just set it to an empty array
-		return new Table($newName, $table->getColumns(), $newIndexes, [], 0, $table->getOptions());
-	}
-
 	public function createSchema() {
-		$filterExpression = $this->getFilterExpression();
-		$this->connection->getConfiguration()->setFilterSchemaAssetsExpression($filterExpression);
+		$this->connection->getConfiguration()->setSchemaAssetsFilter(function ($asset) {
+			return $this->filterSchemaAsset($asset);
+		});
 		return $this->connection->getSchemaManager()->createSchema();
 	}
 
@@ -143,7 +125,7 @@ class Migrator {
 	 * @param Schema $targetSchema
 	 * @param \Doctrine\DBAL\Connection $connection
 	 * @return \Doctrine\DBAL\Schema\SchemaDiff
-	 * @throws DBALException
+	 * @throws \Doctrine\DBAL\Exception
 	 */
 	protected function getDiff(Schema $targetSchema, \Doctrine\DBAL\Connection $connection) {
 		// adjust varchar columns with a length higher then getVarcharMaxLength to clob
@@ -158,8 +140,9 @@ class Migrator {
 			}
 		}
 
-		$filterExpression = $this->getFilterExpression();
-		$this->connection->getConfiguration()->setFilterSchemaAssetsExpression($filterExpression);
+		$this->connection->getConfiguration()->setSchemaAssetsFilter(function ($asset) {
+			return $this->filterSchemaAsset($asset);
+		});
 		$sourceSchema = $connection->getSchemaManager()->createSchema();
 
 		// remove tables we don't know about
@@ -191,26 +174,18 @@ class Migrator {
 
 		$schemaDiff = $this->getDiff($targetSchema, $connection);
 
-		$connection->beginTransaction();
+		if (!$connection->getDatabasePlatform() instanceof MySQLPlatform) {
+			$connection->beginTransaction();
+		}
 		$sqls = $schemaDiff->toSql($connection->getDatabasePlatform());
 		$step = 0;
 		foreach ($sqls as $sql) {
 			$this->emit($sql, $step++, \count($sqls));
-			$connection->query($sql);
+			$connection->executeQuery($sql);
 		}
-		$connection->commit();
-	}
-
-	/**
-	 * @param string $sourceName
-	 * @param string $targetName
-	 */
-	protected function copyTable($sourceName, $targetName) {
-		$quotedSource = $this->connection->quoteIdentifier($sourceName);
-		$quotedTarget = $this->connection->quoteIdentifier($targetName);
-
-		$this->connection->exec('CREATE TABLE ' . $quotedTarget . ' (LIKE ' . $quotedSource . ')');
-		$this->connection->exec('INSERT INTO ' . $quotedTarget . ' SELECT * FROM ' . $quotedSource);
+		if (!$connection->getDatabasePlatform() instanceof MySQLPlatform) {
+			$connection->commit();
+		}
 	}
 
 	/**
@@ -231,10 +206,6 @@ class Migrator {
 		return $script;
 	}
 
-	protected function getFilterExpression() {
-		return '/^' . \preg_quote($this->config->getSystemValue('dbtableprefix', 'oc_')) . '/';
-	}
-
 	protected function emit($sql, $step, $max) {
 		if ($this->noEmit) {
 			return;
@@ -243,12 +214,5 @@ class Migrator {
 			return;
 		}
 		$this->dispatcher->dispatch(new GenericEvent($sql, [$step+1, $max]), '\OC\DB\Migrator::executeSql');
-	}
-
-	private function emitCheckStep($tableName, $step, $max) {
-		if ($this->dispatcher === null) {
-			return;
-		}
-		$this->dispatcher->dispatch(new GenericEvent($tableName, [$step+1, $max]), '\OC\DB\Migrator::checkTable');
 	}
 }

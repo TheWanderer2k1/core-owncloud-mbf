@@ -30,14 +30,18 @@ then
 	# explicitly tell Behat to not do colored output
 	COLORS_OPTION="--no-colors"
 	# Use the Bash "null" command to do nothing, rather than use tput to set a color
-	RED_COLOR=":"
-	GREEN_COLOR=":"
-	YELLOW_COLOR=":"
+	RED_COLOR=""
+	GREEN_COLOR=""
+	YELLOW_COLOR=""
 else
+	# If TERM is empty or set to "dumb" then set it to xterm so that the text
+	# color controls will be generated.
+	# In Github workflow CI, TERM is often set to "dumb".
+	[[ -z "$TERM" || "$TERM" == "dumb" ]] && export TERM=xterm
 	COLORS_OPTION="--colors"
-	RED_COLOR="tput setaf 1"
-	GREEN_COLOR="tput setaf 2"
-	YELLOW_COLOR="tput setaf 3"
+	RED_COLOR=$(tput setaf 1)
+	GREEN_COLOR=$(tput setaf 2)
+	YELLOW_COLOR=$(tput setaf 3)
 fi
 
 # The following environment variables can be specified:
@@ -46,7 +50,8 @@ fi
 # BEHAT_FEATURE - see "--feature" description
 # BEHAT_FILTER_TAGS - see "--tags" description
 # BEHAT_SUITE - see "--suite" description
-# BEHAT_YML - see "--config" description
+# BEHAT_SUITES_STRING - see "--suites" description
+# BEHAT_CONFIG_FILE - see "--config" description
 # BROWSER - see "--browser" description
 # NORERUN - see "--norerun" description
 # RERUN_FAILED_WEBUI_SCENARIOS - opposite of NORERUN
@@ -101,9 +106,10 @@ then
 fi
 
 # Look for command line options for:
-# -c or --config - specify a behat.yml to use
+# -c or --config - specify a behat.php to use
 # --feature - specify a single feature to run
 # --suite - specify a single suite to run
+# --suites - specify a comma-separated list of suites to run
 # --type - api, cli or webui - if no individual feature or suite is specified, then
 #          specify the type of acceptance tests to run. Default api.
 # --tags - specify tags for scenarios to run (or not)
@@ -126,7 +132,7 @@ do
 	key="$1"
 	case ${key} in
 		-c|--config)
-			BEHAT_YML="$2"
+			BEHAT_CONFIG_FILE="$2"
 			shift
 			;;
 		--feature)
@@ -135,6 +141,10 @@ do
 			;;
 		--suite)
 			BEHAT_SUITE="$2"
+			shift
+			;;
+		--suites)
+			BEHAT_SUITES_STRING="$2"
 			shift
 			;;
 		--loop)
@@ -298,6 +308,7 @@ function assert_server_up() {
 	curl -k -sSf -L $1/status.php -o /dev/null
 	if [[ $? -eq 0 ]]
 	then
+		echo "Server on $1 is responding to status request"
 		return
 	else
 		echo >&2 "Server on $1 is down or not working correctly."
@@ -319,6 +330,7 @@ function assert_testing_app_enabled() {
 		echo >&2 "Please install and enable it to run the tests."
 		exit 98
 	else
+		echo "Testing app is enabled on the server on $1."
 		return
 	fi
 }
@@ -385,7 +397,7 @@ function env_alt_home_clear {
 # $PLATFORM_TEXT
 # $TEST_LOG_FILE
 # $BEHAT - behat executable
-# $BEHAT_YML
+# $BEHAT_CONFIG_FILE
 # $RUNNING_WEBUI_TESTS
 # $RERUN_FAILED_WEBUI_SCENARIOS
 #
@@ -407,7 +419,7 @@ function run_behat_tests() {
 		cat ${SCRIPT_PATH}/usernames.json
 	fi
 
-	${BEHAT} ${COLORS_OPTION} --strict ${STEP_THROUGH_OPTION} -c ${BEHAT_YML} -f pretty ${BEHAT_SUITE_OPTION} --tags ${BEHAT_FILTER_TAGS} ${BEHAT_FEATURE} -v 2>&1 | tee -a ${TEST_LOG_FILE}
+	${BEHAT} ${COLORS_OPTION} --strict ${STEP_THROUGH_OPTION} -c ${BEHAT_CONFIG_FILE} -f pretty ${BEHAT_SUITE_OPTION} --tags ${BEHAT_FILTER_TAGS} ${BEHAT_FEATURE} -v 2>&1 | tee -a ${TEST_LOG_FILE}
 
 	BEHAT_EXIT_STATUS=${PIPESTATUS[0]}
 
@@ -434,7 +446,7 @@ function run_behat_tests() {
 		# So exit the tests and do not lint expected failures when undefined steps exist.
 		if [[ ${SCENARIO_RESULTS} == *"undefined"* ]]
 		then
-			${RED_COLOR}; echo -e "Undefined steps: There were some undefined steps found."
+			echo -e "${RED_COLOR}Undefined steps: There were some undefined steps found."
 			exit 1
 		fi
 		# If there were no scenarios in the requested suite or feature that match
@@ -494,9 +506,22 @@ function run_behat_tests() {
 			echo "Checking expected failures"
 		fi
 
+		# set the Internal Field Separator (IFS) to a newlinw,
+		# so that we loop over each whole line of the failed scenarios list
+		IFS=$'\n'
 		# Check that every failed scenario is in the list of expected failures
-		for FAILED_SCENARIO_PATH in ${FAILED_SCENARIO_PATHS}
+		for FAILED_SCENARIO_LINE in ${FAILED_SCENARIO_PATHS}
 			do
+				# each FAILED_SCENARIO_LINE looks like:
+				# whitespace then a full path to a feature file,
+				# then colon and the line number in the feature file,
+				# then other text indicating exactly which line of the scenario failed.
+				# Example:
+				# "    /drone/src/tests/acceptance/features/webUISharingPublic2/shareByPublicLink.feature:55 (on line 66)"
+				# remove any whitespace from the beginning of the line
+				FAILED_SCENARIO_X="${FAILED_SCENARIO_LINE#"${FAILED_SCENARIO_LINE%%[![:space:]]*}"}"
+				# remove any characters from the first space onwards
+				FAILED_SCENARIO_PATH=${FAILED_SCENARIO_X%% *}
 				SUITE_PATH=`dirname ${FAILED_SCENARIO_PATH}`
 				SUITE=`basename ${SUITE_PATH}`
 				SCENARIO=`basename ${FAILED_SCENARIO_PATH}`
@@ -540,9 +565,12 @@ function run_behat_tests() {
 				# FAILED_SCENARIO_PATHS - for example looking for apiComments/comments.feature:9
 				# we want to match lines like:
 				# tests/acceptance/features/apiComments/comments.feature:9
+				# tests/acceptance/features/apiComments/comments.feature:9 (on line 15)
 				# but not lines like::
 				# tests/acceptance/features/apiComments/comments.feature:902
-				echo "${FAILED_SCENARIO_PATHS}" | grep ${SUITE_SCENARIO}$ > /dev/null
+				# Behat can append " (on line N)", the line of the failed step: 3.34 does it
+				# for every failed scenario, while 3.13 printed these paths without it.
+				echo "${FAILED_SCENARIO_PATHS}" | grep -E "${SUITE_SCENARIO}( [(]on line [0-9]+[)])?$" > /dev/null
 				if [ $? -ne 0 ]
 				then
 					echo "Info: Scenario ${SUITE_SCENARIO} was expected to fail but did not fail."
@@ -550,8 +578,21 @@ function run_behat_tests() {
 				fi
 			done < ${EXPECTED_FAILURES_FILE}
 	else
-		for FAILED_SCENARIO_PATH in ${FAILED_SCENARIO_PATHS}
+		# set the Internal Field Separator (IFS) to a newlinw,
+		# so that we loop over each whole line of the failed scenarios list
+		IFS=$'\n'
+		for FAILED_SCENARIO_LINE in ${FAILED_SCENARIO_PATHS}
 		do
+			# each FAILED_SCENARIO_LINE looks like:
+			# whitespace then a full path to a feature file,
+			# then colon and the line number in the feature file,
+			# then other text indicating exactly which line of the scenario failed.
+			# Example:
+			# "    /drone/src/tests/acceptance/features/webUISharingPublic2/shareByPublicLink.feature:55 (on line 66)"
+			# remove any whitespace from the beginning of the line
+			FAILED_SCENARIO_X="${FAILED_SCENARIO_LINE#"${FAILED_SCENARIO_LINE%%[![:space:]]*}"}"
+			# remove any characters from the first space onwards
+			FAILED_SCENARIO_PATH=${FAILED_SCENARIO_X%% *}
 			SUITE_PATH=$(dirname "${FAILED_SCENARIO_PATH}")
 			SUITE=$(basename "${SUITE_PATH}")
 			SCENARIO=$(basename "${FAILED_SCENARIO_PATH}")
@@ -589,9 +630,21 @@ function run_behat_tests() {
 			unset FAILED_SCENARIO_PATHS
 			FAILED_SCENARIO_PATHS=()
 		fi
-
-		for FAILED_SCENARIO_PATH in ${FAILED_SCENARIO_PATHS}
+		# set the Internal Field Separator (IFS) to a newlinw,
+		# so that we loop over each whole line of the failed scenarios list
+		IFS=$'\n'
+		for FAILED_SCENARIO_LINE in ${FAILED_SCENARIO_PATHS}
 			do
+				# each FAILED_SCENARIO_LINE looks like:
+				# whitespace then a full path to a feature file,
+				# then colon and the line number in the feature file,
+				# then other text indicating exactly which line of the scenario failed.
+				# Example:
+				# "    /drone/src/tests/acceptance/features/webUISharingPublic2/shareByPublicLink.feature:55 (on line 66)"
+				# remove any whitespace from the beginning of the line
+				FAILED_SCENARIO_X="${FAILED_SCENARIO_LINE#"${FAILED_SCENARIO_LINE%%[![:space:]]*}"}"
+				# remove any characters from the first space onwards
+				FAILED_SCENARIO_PATH=${FAILED_SCENARIO_X%% *}
 				SUITE_PATH=`dirname ${FAILED_SCENARIO_PATH}`
 				SUITE=`basename ${SUITE_PATH}`
 				SCENARIO=`basename ${FAILED_SCENARIO_PATH}`
@@ -608,7 +661,7 @@ function run_behat_tests() {
 				fi
 
 				echo "Rerun failed scenario: ${FAILED_SCENARIO_PATH}"
-				${BEHAT} ${COLORS_OPTION} --strict -c ${BEHAT_YML} -f pretty ${BEHAT_SUITE_OPTION} --tags ${BEHAT_FILTER_TAGS} ${FAILED_SCENARIO_PATH} -v 2>&1 | tee -a ${TEST_LOG_FILE}
+				${BEHAT} ${COLORS_OPTION} --strict -c ${BEHAT_CONFIG_FILE} -f pretty ${BEHAT_SUITE_OPTION} --tags ${BEHAT_FILTER_TAGS} ${FAILED_SCENARIO_PATH} -v 2>&1 | tee -a ${TEST_LOG_FILE}
 				BEHAT_EXIT_STATUS=${PIPESTATUS[0]}
 				if [ ${BEHAT_EXIT_STATUS} -eq 0 ]
 				then
@@ -638,7 +691,7 @@ function run_behat_tests() {
 		# Big red error output is displayed if there are no matching scenarios - send it to null
 		DRY_RUN_FILE=$(mktemp)
 		SKIP_TAGS="${TEST_TYPE_TAG}&&@skip"
-		${BEHAT} --dry-run ${COLORS_OPTION} -c ${BEHAT_YML} -f pretty ${BEHAT_SUITE_OPTION} --tags "${SKIP_TAGS}" ${BEHAT_FEATURE} 1>${DRY_RUN_FILE} 2>/dev/null
+		${BEHAT} --dry-run ${COLORS_OPTION} -c ${BEHAT_CONFIG_FILE} -f pretty ${BEHAT_SUITE_OPTION} --tags "${SKIP_TAGS}" ${BEHAT_FEATURE} 1>${DRY_RUN_FILE} 2>/dev/null
 		if grep -q -m 1 'No scenarios' "${DRY_RUN_FILE}"
 		then
 			# If there are no skip scenarios, then no need to report that
@@ -721,7 +774,7 @@ function teardown() {
 declare -x TEST_SERVER_URL
 declare -x TEST_SERVER_FED_URL
 declare -x TEST_WITH_PHPDEVSERVER
-[[ -z "${TEST_SERVER_URL}" && -z "${TEST_SERVER_FED_URL}" ]] && TEST_WITH_PHPDEVSERVER="true"
+[[ -z "${TEST_SERVER_URL}" ]] && TEST_WITH_PHPDEVSERVER="true"
 
 if [ -z "${IPV4_URL}" ]
 then
@@ -750,7 +803,7 @@ then
 		OCC_FED_URL="${TESTING_APP_FED_URL}occ"
 		# test that fed server is up and running, and testing app is enabled.
 		assert_server_up ${TEST_SERVER_FED_URL}
-		assert_testing_app_enabled ${TEST_SERVER_URL}
+		assert_testing_app_enabled ${TEST_SERVER_FED_URL}
 	fi
 
 	echo "Not using php inbuilt server for running scenario ..."
@@ -786,14 +839,7 @@ else
 	PHPPID=$!
 	echo ${PHPPID}
 
-	PORT_FED=$((8180 + ${EXECUTOR_NUMBER}))
-	echo ${PORT_FED}
-	php -S localhost:${PORT_FED} -t ../.. &
-	PHPPID_FED=$!
-	echo ${PHPPID_FED}
-
 	export TEST_SERVER_URL="http://localhost:${PORT}"
-	export TEST_SERVER_FED_URL="http://localhost:${PORT_FED}"
 
 	# The endpoint to use to do occ commands via the testing app
 	TESTING_APP_URL="${TEST_SERVER_URL}/ocs/v2.php/apps/testing/api/v1/"
@@ -811,34 +857,37 @@ then
 	BEHAT_SUITE=`basename ${SUITE_PATH}`
 fi
 
-if [ -z "${BEHAT_YML}" ]
+if [ -z "${BEHAT_CONFIG_FILE}" ]
 then
-	# Look for a behat.yml somewhere below the current working directory
-	# This saves app acceptance tests being forced to specify BEHAT_YML
-	BEHAT_YML="config/behat.yml"
-	if [ ! -f "${BEHAT_YML}" ]
+	# Look for a behat.php somewhere below the current working directory
+	# This saves app acceptance tests being forced to specify BEHAT_CONFIG_FILE
+	BEHAT_CONFIG_FILE="config/behat.php"
+	if [ ! -f "${BEHAT_CONFIG_FILE}" ]
 	then
-		BEHAT_YML="acceptance/config/behat.yml"
+		BEHAT_CONFIG_FILE="acceptance/config/behat.php"
 	fi
-	if [ ! -f "${BEHAT_YML}" ]
+	if [ ! -f "${BEHAT_CONFIG_FILE}" ]
 	then
-		BEHAT_YML="tests/acceptance/config/behat.yml"
+		BEHAT_CONFIG_FILE="tests/acceptance/config/behat.php"
 	fi
-	# If no luck above, then use the core behat.yml that should live below this script
-	if [ ! -f "${BEHAT_YML}" ]
+	# If no luck above, then use the core behat.php that should live below this script
+	if [ ! -f "${BEHAT_CONFIG_FILE}" ]
 	then
-		BEHAT_YML="${SCRIPT_PATH}/config/behat.yml"
+		BEHAT_CONFIG_FILE="${SCRIPT_PATH}/config/behat.php"
 	fi
 fi
 
-BEHAT_CONFIG_DIR=$(dirname "${BEHAT_YML}")
+BEHAT_CONFIG_DIR=$(dirname "${BEHAT_CONFIG_FILE}")
 ACCEPTANCE_DIR=$(dirname "${BEHAT_CONFIG_DIR}")
 BEHAT_FEATURES_DIR="${ACCEPTANCE_DIR}/features"
 
-declare -a BEHAT_SUITES
-if [[ -n "${BEHAT_SUITE}" ]]
+declare -a BEHAT_SUITES_ARRAY
+if [[ -n "${BEHAT_SUITES_STRING}" ]]
 then
-	BEHAT_SUITES+=(${BEHAT_SUITE})
+  IFS=',' read -r -a BEHAT_SUITES_ARRAY <<< "$BEHAT_SUITES_STRING"
+elif [[ -n "${BEHAT_SUITE}" ]]
+then
+	BEHAT_SUITES_ARRAY+=(${BEHAT_SUITE})
 else
 	if [[ -n "${RUN_PART}" ]]
 	then
@@ -868,7 +917,7 @@ else
 		fi
 
 		COUNT_FINISH_AND_TODO_SUITES=$((${SUITES_IN_PREVIOUS_RUNS} + ${SUITES_THIS_RUN}))
-		BEHAT_SUITES+=(`echo "${ALL_SUITES}" | head -n ${COUNT_FINISH_AND_TODO_SUITES} | tail -n ${SUITES_THIS_RUN}`)
+		BEHAT_SUITES_ARRAY+=(`echo "${ALL_SUITES}" | head -n ${COUNT_FINISH_AND_TODO_SUITES} | tail -n ${SUITES_THIS_RUN}`)
 	fi
 fi
 
@@ -1023,10 +1072,21 @@ then
 	done
 fi
 
+if [ -z "${APP_NAME}" ]
+then
+	APP_NAME=""
+fi
+
 #Enable and disable apps as required for default
 if [ -z "${APPS_TO_DISABLE}" ]
 then
-	APPS_TO_DISABLE="firstrunwizard notifications"
+  if [[ "${APP_NAME}" == "notifications" ]]; then
+    APPS_TO_DISABLE="firstrunwizard"
+  elif [[ "${APP_NAME}" == "firstrunwizard" ]]; then
+    APPS_TO_DISABLE="notifications"
+  else
+    APPS_TO_DISABLE="firstrunwizard notifications"
+  fi
 fi
 
 if [ -z "${APPS_TO_ENABLE}" ]
@@ -1114,6 +1174,11 @@ fi
 if [ "${OC_TEST_ON_OBJECTSTORE}" = "1" ]
 then
 	BEHAT_FILTER_TAGS="${BEHAT_FILTER_TAGS}&&~@skip_on_objectstore"
+fi
+
+if [ -n "${S3_TYPE}" ]
+then
+	BEHAT_FILTER_TAGS="${BEHAT_FILTER_TAGS}&&~@skipOnStorage:${S3_TYPE}"
 fi
 
 # If the caller did not mention specific tags, skip the skipped tests by default
@@ -1211,7 +1276,7 @@ TEST_LOG_FILE=$(mktemp)
 SCENARIOS_THAT_PASSED=0
 SCENARIOS_THAT_FAILED=0
 
-if [ ${#BEHAT_SUITES[@]} -eq 0 ] && [ -z "${BEHAT_FEATURE}" ]
+if [ ${#BEHAT_SUITES_ARRAY[@]} -eq 0 ] && [ -z "${BEHAT_FEATURE}" ]
 then
 	SUITE_FEATURE_TEXT="all ${TEST_TYPE_TEXT}"
 	run_behat_tests
@@ -1232,11 +1297,11 @@ else
 	fi
 fi
 
-for i in "${!BEHAT_SUITES[@]}"
+for i in "${!BEHAT_SUITES_ARRAY[@]}"
 	do
-		BEHAT_SUITE_TO_RUN="${BEHAT_SUITES[$i]}"
+		BEHAT_SUITE_TO_RUN="${BEHAT_SUITES_ARRAY[$i]}"
 		BEHAT_SUITE_OPTION="--suite=${BEHAT_SUITE_TO_RUN}"
-		SUITE_FEATURE_TEXT="${BEHAT_SUITES[$i]}"
+		SUITE_FEATURE_TEXT="${BEHAT_SUITES_ARRAY[$i]}"
 		for rerun_number in $(seq 1 ${BEHAT_RERUN_TIMES})
 			do
 				if ((${BEHAT_RERUN_TIMES} > 1))
@@ -1329,24 +1394,24 @@ fi
 
 if [ "${UNEXPECTED_FAILURE}" = true ]
 then
-	${YELLOW_COLOR}; echo "runsh: Total unexpected failed scenarios throughout the test run:"
-	${RED_COLOR}; printf "%s\n" "${UNEXPECTED_FAILED_SCENARIOS[@]}"
+	echo "${YELLOW_COLOR}runsh: Total unexpected failed scenarios throughout the test run:"
+	echo "${RED_COLOR}"; printf "%s\n" "${UNEXPECTED_FAILED_SCENARIOS[@]}"
 else
-	${GREEN_COLOR}; echo "runsh: There were no unexpected failures."
+	echo "${GREEN_COLOR}runsh: There were no unexpected failures."
 fi
 
 if [ "${UNEXPECTED_SUCCESS}" = true ]
 then
-	${YELLOW_COLOR}; echo "runsh: Total unexpected passed scenarios throughout the test run:"
-	${RED_COLOR}; printf "%s\n" "${ACTUAL_UNEXPECTED_PASS[@]}"
+	echo "${YELLOW_COLOR}runsh: Total unexpected passed scenarios throughout the test run:"
+	echo "${RED_COLOR}"; printf "%s\n" "${ACTUAL_UNEXPECTED_PASS[@]}"
 else
-	${GREEN_COLOR}; echo "runsh: There were no unexpected success."
+	echo "${GREEN_COLOR}runsh: There were no unexpected success."
 fi
 
 if [ "${UNEXPECTED_BEHAT_EXIT_STATUS}" = true ]
 then
-	${YELLOW_COLOR}; echo "runsh: The following Behat test runs exited with non-zero status:"
-	${RED_COLOR}; printf "%s\n" "${UNEXPECTED_BEHAT_EXIT_STATUSES[@]}"
+	echo "${YELLOW_COLOR}runsh: The following Behat test runs exited with non-zero status:"
+	echo "${RED_COLOR}"; printf "%s\n" "${UNEXPECTED_BEHAT_EXIT_STATUSES[@]}"
 fi
 
 # sync the file-system so all output will be flushed to storage.

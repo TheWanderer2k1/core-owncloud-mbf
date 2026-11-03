@@ -21,9 +21,11 @@
 
 namespace Test\Share;
 
+use Doctrine\DBAL\Result;
 use Test\Traits\UserTrait;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\EventDispatcher\GenericEvent;
+use Doctrine\DBAL\Driver\ResultStatement;
 
 /**
  * Class Test_Share
@@ -97,8 +99,8 @@ class ShareTest extends \Test\TestCase {
 	}
 
 	protected function tearDown(): void {
-		$query = \OC_DB::prepare('DELETE FROM `*PREFIX*share` WHERE `item_type` = ?');
-		$query->execute(['test']);
+		$connection = \OC::$server->getDatabaseConnection();
+		$connection->executeStatement('DELETE FROM `*PREFIX*share` WHERE `item_type` = ?', ['test']);
 		\OC::$server->getAppConfig()->setValue('core', 'shareapi_allow_resharing', $this->resharing);
 
 		$user = \OC::$server->getUserManager()->get($this->user1);
@@ -424,13 +426,14 @@ class ShareTest extends \Test\TestCase {
 		$this->shareUserTestFileAsLink();
 
 		// manipulate share table and set expire date to the past
-		$query = \OC_DB::prepare('UPDATE `*PREFIX*share` SET `expiration` = ? WHERE `item_type` = ? AND `item_source` = ?  AND `uid_owner` = ? AND `share_type` = ?');
+		$connection = \OC::$server->getDatabaseConnection();
+		$query = $connection->prepare('UPDATE `*PREFIX*share` SET `expiration` = ? WHERE `item_type` = ? AND `item_source` = ?  AND `uid_owner` = ? AND `share_type` = ?');
 		$query->bindValue(1, new \DateTime($this->dateInPast), 'datetime');
 		$query->bindValue(2, 'test');
 		$query->bindValue(3, 'test.txt');
 		$query->bindValue(4, $this->user1);
 		$query->bindValue(5, \OCP\Share::SHARE_TYPE_LINK);
-		$query->execute();
+		$query->executeStatement();
 
 		$shares = \OCP\Share::getItemsShared('test');
 		$this->assertCount(1, $shares);
@@ -638,19 +641,20 @@ class ShareTest extends \Test\TestCase {
 		\OC_User::setUserId($this->user1);
 
 		//add dummy values to the share table
-		$query = \OC_DB::prepare('INSERT INTO `*PREFIX*share` ('
+		$connection = \OC::$server->getDatabaseConnection();
+		$query = $connection->prepare('INSERT INTO `*PREFIX*share` ('
 			.' `item_type`, `item_source`, `item_target`, `share_type`,'
 			.' `share_with`, `uid_owner`) VALUES (?,?,?,?,?,?)');
 		$args = ['test', 99, 'target1', \OCP\Share::SHARE_TYPE_USER, $this->user2, $this->user1];
-		$query->execute($args);
+		$query->executeStatement($args);
 		$args = ['test', 99, 'target2', \OCP\Share::SHARE_TYPE_USER, $this->user4, $this->user1];
-		$query->execute($args);
+		$query->executeStatement($args);
 		$args = ['test', 99, 'target3', \OCP\Share::SHARE_TYPE_USER, $this->user3, $this->user2];
-		$query->execute($args);
+		$query->executeStatement($args);
 		$args = ['test', 99, 'target4', \OCP\Share::SHARE_TYPE_USER, $this->user3, $this->user4];
-		$query->execute($args);
+		$query->executeStatement($args);
 		$args = ['test', 99, 'target4', \OCP\Share::SHARE_TYPE_USER, $this->user6, $this->user4];
-		$query->execute($args);
+		$query->executeStatement($args);
 
 		$result1 = \OCP\Share::getItemSharedWithUser('test', 99, $this->user2, $this->user1);
 		$this->assertCount(1, $result1);
@@ -677,17 +681,18 @@ class ShareTest extends \Test\TestCase {
 		\OC_User::setUserId($this->user1);
 
 		//add dummy values to the share table
-		$query = \OC_DB::prepare('INSERT INTO `*PREFIX*share` ('
+		$connection = \OC::$server->getDatabaseConnection();
+		$query = $connection->prepare('INSERT INTO `*PREFIX*share` ('
 			.' `item_type`, `item_source`, `item_target`, `share_type`,'
 			.' `share_with`, `uid_owner`) VALUES (?,?,?,?,?,?)');
 		$args = ['test', 99, 'target1', \OCP\Share::SHARE_TYPE_GROUP, $this->group1, $this->user1];
-		$query->execute($args);
+		$query->executeStatement($args);
 		$args = ['test', 99, 'target2', \OCP\Share::SHARE_TYPE_GROUP, $this->group2, $this->user1];
-		$query->execute($args);
+		$query->executeStatement($args);
 		$args = ['test', 99, 'target3', \OCP\Share::SHARE_TYPE_GROUP, $this->group1, $this->user2];
-		$query->execute($args);
+		$query->executeStatement($args);
 		$args = ['test', 99, 'target4', \OCP\Share::SHARE_TYPE_GROUP, $this->group1, $this->user4];
-		$query->execute($args);
+		$query->executeStatement($args);
 
 		// user2 is in group1 and group2
 		$result1 = \OCP\Share::getItemSharedWithUser('test', 99, $this->user2, $this->user1);
@@ -785,13 +790,14 @@ class ShareTest extends \Test\TestCase {
 		);
 
 		// manipulate share table and set expire date to the past
-		$query = \OC_DB::prepare('UPDATE `*PREFIX*share` SET `expiration` = ? WHERE `item_type` = ? AND `item_source` = ?  AND `uid_owner` = ? AND `share_type` = ?');
+		$connection = \OC::$server->getDatabaseConnection();
+		$query = $connection->prepare('UPDATE `*PREFIX*share` SET `expiration` = ? WHERE `item_type` = ? AND `item_source` = ?  AND `uid_owner` = ? AND `share_type` = ?');
 		$query->bindValue(1, new \DateTime($this->dateInPast), 'datetime');
 		$query->bindValue(2, 'test');
 		$query->bindValue(3, 'test.txt');
 		$query->bindValue(4, $this->user1);
 		$query->bindValue(5, \OCP\Share::SHARE_TYPE_LINK);
-		$query->execute();
+		$query->executeStatement();
 
 		$this->assertFalse(
 			\OCP\Share::getShareByToken($token),
@@ -1220,7 +1226,7 @@ class ShareTest extends \Test\TestCase {
 		   ->setParameter('owner', $this->user1)
 		   ->setParameter('share_type', \OCP\Share::SHARE_TYPE_LINK);
 
-		$res = $qb->execute()->fetchAll();
+		$res = $qb->execute()->fetchAllAssociative();
 		$this->assertCount(1, $res);
 		$id = $res[0]['id'];
 
@@ -1234,7 +1240,7 @@ class ShareTest extends \Test\TestCase {
 		   ->from('share')
 			->where($qb->expr()->eq('id', $qb->createParameter('id')))
 		   ->setParameter('id', $id);
-		$hash = $qb->execute()->fetch()['share_with'];
+		$hash = $qb->execute()->fetchAssociative()['share_with'];
 
 		$hasher = \OC::$server->getHasher();
 
@@ -1271,10 +1277,10 @@ class ShareTest extends \Test\TestCase {
 		$qb->method('setParameter')->will($this->returnSelf());
 		$qb->method('expr')->willReturn($ex);
 
-		$ret = $this->getMockBuilder('\Doctrine\DBAL\Driver\ResultStatement')
+		$ret = $this->getMockBuilder(Result::class)
 					->disableOriginalConstructor()
 					->getMock();
-		$ret->method('fetch')->willReturn(['uid_owner' => 'user']);
+		$ret->method('fetchAssociative')->willReturn(['uid_owner' => 'user']);
 		$qb->method('execute')->willReturn($ret);
 
 		$connection  = $this->getMockBuilder('\OC\DB\Connection')
@@ -1332,10 +1338,10 @@ class ShareTest extends \Test\TestCase {
 		$qb->method('setParameter')->will($this->returnSelf());
 		$qb->method('expr')->willReturn($ex);
 
-		$ret = $this->getMockBuilder('\Doctrine\DBAL\Driver\ResultStatement')
+		$ret = $this->getMockBuilder(Result::class)
 					->disableOriginalConstructor()
 					->getMock();
-		$ret->method('fetch')->willReturn(['uid_owner' => 'user']);
+		$ret->method('fetchAssociative')->willReturn(['uid_owner' => 'user']);
 		$qb->method('execute')->willReturn($ret);
 
 		$connection  = $this->getMockBuilder('\OC\DB\Connection')
@@ -1383,10 +1389,10 @@ class ShareTest extends \Test\TestCase {
 		$qb->method('setParameter')->will($this->returnSelf());
 		$qb->method('expr')->willReturn($ex);
 
-		$ret = $this->getMockBuilder('\Doctrine\DBAL\Driver\ResultStatement')
+		$ret = $this->getMockBuilder(Result::class)
 					->disableOriginalConstructor()
 					->getMock();
-		$ret->method('fetch')->willReturn([]);
+		$ret->method('fetchAssociative')->willReturn([]);
 		$qb->method('execute')->willReturn($ret);
 
 		$connection  = $this->getMockBuilder('\OC\DB\Connection')
@@ -1433,10 +1439,10 @@ class ShareTest extends \Test\TestCase {
 		$qb->method('setParameter')->will($this->returnSelf());
 		$qb->method('expr')->willReturn($ex);
 
-		$ret = $this->getMockBuilder('\Doctrine\DBAL\Driver\ResultStatement')
+		$ret = $this->getMockBuilder(Result::class)
 					->disableOriginalConstructor()
 					->getMock();
-		$ret->method('fetch')->willReturn(['uid_owner' => 'user2']);
+		$ret->method('fetchAssociative')->willReturn(['uid_owner' => 'user2']);
 		$qb->method('execute')->willReturn($ret);
 
 		$connection  = $this->getMockBuilder('\OC\DB\Connection')

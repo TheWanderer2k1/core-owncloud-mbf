@@ -21,6 +21,7 @@
 
 namespace OC\Core\Controller;
 
+use OC\Authentication\AccountLockout\AccountLockout;
 use OC\OCS\Result;
 use OCP\IDBConnection;
 use OCP\IRequest;
@@ -44,6 +45,9 @@ class OcsController extends \OCP\AppFramework\OCSController {
 	/** @var IUserManager */
 	private $userManager;
 
+	/** @var AccountLockout */
+	private $accountLockout;
+
 	/**
 	 * OccController constructor.
 	 *
@@ -56,12 +60,14 @@ class OcsController extends \OCP\AppFramework\OCSController {
 		IRequest $request,
 		IDBConnection $dbConnection,
 		IUserSession $userSession,
-		IUserManager $userManager
+		IUserManager $userManager,
+		AccountLockout $accountLockout
 	) {
 		parent::__construct($appName, $request);
 		$this->dbConnection = $dbConnection;
 		$this->userSession = $userSession;
 		$this->userManager = $userManager;
+		$this->accountLockout = $accountLockout;
 	}
 
 	/**
@@ -92,12 +98,21 @@ class OcsController extends \OCP\AppFramework\OCSController {
 	 */
 	public function checkPerson($login, $password) {
 		if ($login && $password) {
+			// this endpoint verifies a password, so it has to respect the lockout
+			// as well - otherwise it stays an unthrottled oracle for the same
+			// passwords. The response is the one of a wrong password on purpose,
+			// it must not tell an attacker anything about the account.
+			if ($this->accountLockout->getRemainingLockTime($login) > 0) {
+				return new Result(null, 102);
+			}
 			$user = $this->userManager->checkPassword($login, $password);
 			if ($user !== false) {
+				$this->accountLockout->clearFailures($login, $user->getUID());
 				$xml = [];
 				$xml['person']['personid'] = $user->getUID();
 				return new Result($xml);
 			} else {
+				$this->accountLockout->recordFailure($login);
 				return new Result(null, 102);
 			}
 		} else {
@@ -149,23 +164,22 @@ class OcsController extends \OCP\AppFramework\OCSController {
 
 		if ($key === null) {
 			$q = $this->dbConnection->prepare(self::SELECT_MULTIPLE_STMT);
-			$result = $q->execute([$user, $app]);
+			$result = $q->executeQuery([$user, $app]);
 		} else {
 			$key = $this->escape($key);
 			$q = $this->dbConnection->prepare(self::SELECT_SINGLE_STMT);
-			$result = $q->execute([$user, $app, $key]);
+			$result = $q->executeQuery([$user, $app, $key]);
 		}
 
 		$xml = [];
-		if ($result === true) {
-			while ($row = $q->fetch()) {
-				$data= [];
-				$data['key']=$row['key'];
-				$data['app']=$row['app'];
-				$data['value']=$row['value'];
-				$xml[] = $data;
-			}
+		while ($row = $result->fetchAssociative()) {
+			$data= [];
+			$data['key']=$row['key'];
+			$data['app']=$row['app'];
+			$data['value']=$row['value'];
+			$xml[] = $data;
 		}
+		$result->free();
 
 		return new Result($xml);
 	}
@@ -223,7 +237,7 @@ class OcsController extends \OCP\AppFramework\OCSController {
 
 		// delete in DB
 		$q = $this->dbConnection->prepare(self::DELETE_STMT);
-		$q->execute([$user, $app, $key]);
+		$q->executeStatement([$user, $app, $key]);
 
 		return new Result(null, 100);
 	}

@@ -74,13 +74,13 @@ $application->registerRoutes(
 	]
 );
 
-/** @var $this \OC\Route\Router */
+/** @var $this \OCP\Route\IRouter */
 
-$this->create('files_ajax_download', 'ajax/download.php')
+$this->create('files_ajax_download', 'ajax/download')
 	->actionInclude('files/ajax/download.php');
-$this->create('files_ajax_getstoragestats', 'ajax/getstoragestats.php')
+$this->create('files_ajax_getstoragestats', 'ajax/getstoragestats')
 	->actionInclude('files/ajax/getstoragestats.php');
-$this->create('files_ajax_list', 'ajax/list.php')
+$this->create('files_ajax_list', 'ajax/list')
 	->actionInclude('files/ajax/list.php');
 
 $this->create('download', 'download{file}')

@@ -4,7 +4,8 @@ MINIO_MC_RELEASE_2020_VERSION = "minio/mc:RELEASE.2020-12-10T01-26-17Z"
 OC_CI_ALPINE = "owncloudci/alpine:latest"
 OC_CI_BAZEL_BUILDIFIER = "owncloudci/bazel-buildifier"
 OC_CI_CEPH = "owncloudci/ceph:tag-build-master-jewel-ubuntu-16.04"
-OC_CI_CORE_NODEJS = "owncloudci/core:nodejs14"
+OC_CI_CORE = "owncloudci/core:php83"
+OC_CI_CORE_OLD = "owncloudci/core:nodejs14"
 OC_CI_DRONE_SKIP_PIPELINE = "owncloudci/drone-skip-pipeline"
 OC_CI_NODEJS = "owncloudci/nodejs:%s"
 OC_CI_ORACLE_XE = "owncloudci/oracle-xe:latest"
@@ -26,7 +27,7 @@ SONARSOURCE_SONAR_SCANNER_CLI = "sonarsource/sonar-scanner-cli:5"
 TOOLHIPPIE_CALENS = "toolhippie/calens:latest"
 WEBHIPPIE_REDIS = "webhippie/redis:latest"
 
-DEFAULT_PHP_VERSION = "7.4"
+DEFAULT_PHP_VERSION = "8.3"
 DEFAULT_NODEJS_VERSION = "14"
 
 # minio mc environment variables
@@ -58,9 +59,6 @@ config = {
         "master",
     ],
     "dependencies": True,
-    "codestyle": True,
-    "phpstan": True,
-    "phan": True,
     "javascript": True,
     "litmus": True,
     "dav": True,
@@ -70,23 +68,8 @@ config = {
                 DEFAULT_PHP_VERSION,
             ],
             # Gather coverage for all databases except Oracle
-            "coverage": True,
-            "databases": [
-                "sqlite",
-                "mariadb:10.2",
-                "mariadb:10.3",
-                "mariadb:10.4",
-                "mariadb:10.5",
-                "mariadb:10.6",
-                "mariadb:10.7",
-                "mariadb:10.8",
-                "mariadb:10.11",
-                "mysql:5.5",
-                "mysql:5.7",
-                "mysql:8.0",
-                "postgres:9.4",
-                "postgres:10.21",
-            ],
+            "coverage": False,
+            "databases": [],
         },
         "slowDatabases": {
             "phpVersions": [
@@ -100,18 +83,6 @@ config = {
                 "oracle",
             ],
         },
-        "ubuntu22": {
-            "phpVersions": [
-                "7.4-ubuntu22.04",
-            ],
-            # These pipelines are run just to help avoid any obscure regression
-            # on Ubuntu 22.04. We do not need coverage for this.
-            "coverage": False,
-            "databases": [
-                "sqlite",
-                "mariadb:10.6",
-            ],
-        },
         "external-samba": {
             "phpVersions": [
                 DEFAULT_PHP_VERSION,
@@ -122,7 +93,7 @@ config = {
             "externalTypes": [
                 "samba",
             ],
-            "coverage": True,
+            "coverage": False,
             "extraCommandsBeforeTestRun": [
                 "ls -l /var/cache",
                 "mkdir /var/cache/samba",
@@ -140,10 +111,9 @@ config = {
             "externalTypes": [
                 "webdav",
                 "sftp",
-                "scality",
                 "owncloud",
             ],
-            "coverage": True,
+            "coverage": False,
         },
     },
     "acceptance": {
@@ -267,10 +237,6 @@ config = {
             "testingRemoteSystem": False,
         },
         "cliEncryption": {
-            "phpVersions": [
-                DEFAULT_PHP_VERSION,
-                "7.4-ubuntu22.04",
-            ],
             "suites": [
                 "cliEncryption",
             ],
@@ -293,19 +259,6 @@ config = {
                 "mkdir data/owncloud-keys",
                 "chown -R www-data data/owncloud-keys",
                 "chmod -R 0770 data/owncloud-keys",
-            ],
-        },
-        "cliDbConversion": {
-            "suites": [
-                "cliDbConversion",
-            ],
-            "databases": [
-                "sqlite",
-            ],
-            "dbServices": [
-                "sqlite",
-                "mysql:8.0",
-                "postgres:10.21",
             ],
         },
         "cliExternalStorage": {
@@ -449,18 +402,6 @@ config = {
             "runAllSuites": True,
             "numberOfParts": 8,
         },
-        "apiUbuntu22": {
-            "phpVersions": [
-                "7.4-ubuntu22.04",
-            ],
-            "suites": {
-                "apiUbuntu22": "apiUbuntu22",
-            },
-            "useHttps": False,
-            "filterTags": "@smokeTest&&~@notifications-app-required&&~@local_storage&&~@files_external-app-required",
-            "runAllSuites": True,
-            "numberOfParts": 8,
-        },
         "apiOnSqlite": {
             "suites": {
                 "apiOnSqlite": "apiOnSqlite",
@@ -509,10 +450,10 @@ def main(ctx):
     return initial + before + coverageTests + afterCoverageTests + nonCoverageTests + stages
 
 def initialPipelines(ctx):
-    return dependencies(ctx) + checkStarlark() + checkGitCommit()
+    return dependencies(ctx) + checkStarlark()
 
 def beforePipelines(ctx):
-    return codestyle(ctx) + changelog(ctx) + phpstan(ctx) + phan(ctx)
+    return changelog(ctx)
 
 def coveragePipelines(ctx):
     # All unit test pipelines that have coverage or other test analysis reported
@@ -594,88 +535,10 @@ def dependencies(ctx):
                 "steps": cacheRestore() +
                          cacheClearOnEventPush(phpVersion) +
                          composerInstall(phpVersion) +
-                         vendorbinCodestyle(phpVersion) +
-                         vendorbinCodesniffer(phpVersion) +
-                         vendorbinPhan(phpVersion) +
-                         vendorbinPhpstan(phpVersion) +
                          vendorbinBehat() +
                          yarnInstall() +
                          cacheRebuildOnEventPush() +
                          cacheFlushOnEventPush(),
-                "depends_on": [],
-                "trigger": {
-                    "ref": [
-                        "refs/pull/**",
-                        "refs/tags/**",
-                    ],
-                },
-            }
-
-            for branch in config["branches"]:
-                result["trigger"]["ref"].append("refs/heads/%s" % branch)
-
-            pipelines.append(result)
-
-    return pipelines
-
-def codestyle(ctx):
-    pipelines = []
-
-    if "codestyle" not in config:
-        return pipelines
-
-    default = {
-        "phpVersions": [DEFAULT_PHP_VERSION],
-    }
-
-    if "defaults" in config:
-        if "codestyle" in config["defaults"]:
-            for item in config["defaults"]["codestyle"]:
-                default[item] = config["defaults"]["codestyle"][item]
-
-    codestyleConfig = config["codestyle"]
-
-    if type(codestyleConfig) == "bool":
-        if codestyleConfig:
-            # the config has 'codestyle' true, so specify an empty dict that will get the defaults
-            codestyleConfig = {}
-        else:
-            return pipelines
-
-    if len(codestyleConfig) == 0:
-        # 'codestyle' is an empty dict, so specify a single section that will get the defaults
-        codestyleConfig = {"doDefault": {}}
-
-    for category, matrix in codestyleConfig.items():
-        params = {}
-        for item in default:
-            params[item] = matrix[item] if item in matrix else default[item]
-
-        for phpVersion in params["phpVersions"]:
-            name = "coding-standard-php%s" % phpVersion
-
-            result = {
-                "kind": "pipeline",
-                "type": "docker",
-                "name": name,
-                "workspace": {
-                    "base": dir["base"],
-                    "path": "src",
-                },
-                "steps": skipIfUnchanged(ctx, "lint") +
-                         cacheRestore() +
-                         composerInstall(phpVersion) +
-                         vendorbinCodestyle(phpVersion) +
-                         vendorbinCodesniffer(phpVersion) +
-                         [
-                             {
-                                 "name": "php-style",
-                                 "image": OC_CI_PHP % phpVersion,
-                                 "commands": [
-                                     "make test-php-style",
-                                 ],
-                             },
-                         ],
                 "depends_on": [],
                 "trigger": {
                     "ref": [
@@ -783,150 +646,6 @@ def changelog(ctx):
     }
 
     pipelines.append(result)
-
-    return pipelines
-
-def phpstan(ctx):
-    pipelines = []
-
-    if "phpstan" not in config:
-        return pipelines
-
-    default = {
-        "phpVersions": [DEFAULT_PHP_VERSION],
-        "logLevel": "2",
-    }
-
-    if "defaults" in config:
-        if "phpstan" in config["defaults"]:
-            for item in config["defaults"]["phpstan"]:
-                default[item] = config["defaults"]["phpstan"][item]
-
-    phpstanConfig = config["phpstan"]
-
-    if type(phpstanConfig) == "bool":
-        if phpstanConfig:
-            # the config has 'phpstan' true, so specify an empty dict that will get the defaults
-            phpstanConfig = {}
-        else:
-            return pipelines
-
-    if len(phpstanConfig) == 0:
-        # 'phpstan' is an empty dict, so specify a single section that will get the defaults
-        phpstanConfig = {"doDefault": {}}
-
-    for category, matrix in phpstanConfig.items():
-        params = {}
-        for item in default:
-            params[item] = matrix[item] if item in matrix else default[item]
-
-        for phpVersion in params["phpVersions"]:
-            name = "phpstan-php%s" % phpVersion
-
-            result = {
-                "kind": "pipeline",
-                "type": "docker",
-                "name": name,
-                "workspace": {
-                    "base": dir["base"],
-                    "path": "src",
-                },
-                "steps": skipIfUnchanged(ctx, "lint") +
-                         cacheRestore() +
-                         composerInstall(phpVersion) +
-                         vendorbinPhpstan(phpVersion) +
-                         installServer(phpVersion, "sqlite", params["logLevel"]) +
-                         enableAppsForPhpStan(phpVersion) +
-                         [
-                             {
-                                 "name": "php-phpstan",
-                                 "image": OC_CI_PHP % phpVersion,
-                                 "commands": [
-                                     "make test-php-phpstan",
-                                 ],
-                             },
-                         ],
-                "depends_on": [],
-                "trigger": {
-                    "ref": [
-                        "refs/pull/**",
-                        "refs/tags/**",
-                    ],
-                },
-            }
-
-            pipelines.append(result)
-
-    return pipelines
-
-def phan(ctx):
-    pipelines = []
-
-    if "phan" not in config:
-        return pipelines
-
-    default = {
-        "phpVersions": [DEFAULT_PHP_VERSION],
-        "logLevel": "2",
-    }
-
-    if "defaults" in config:
-        if "phan" in config["defaults"]:
-            for item in config["defaults"]["phan"]:
-                default[item] = config["defaults"]["phan"][item]
-
-    phanConfig = config["phan"]
-
-    if type(phanConfig) == "bool":
-        if phanConfig:
-            # the config has 'phan' true, so specify an empty dict that will get the defaults
-            phanConfig = {}
-        else:
-            return pipelines
-
-    if len(phanConfig) == 0:
-        # 'phan' is an empty dict, so specify a single section that will get the defaults
-        phanConfig = {"doDefault": {}}
-
-    for category, matrix in phanConfig.items():
-        params = {}
-        for item in default:
-            params[item] = matrix[item] if item in matrix else default[item]
-
-        for phpVersion in params["phpVersions"]:
-            name = "phan-php%s" % phpVersion
-
-            result = {
-                "kind": "pipeline",
-                "type": "docker",
-                "name": name,
-                "workspace": {
-                    "base": dir["base"],
-                    "path": "src",
-                },
-                "steps": skipIfUnchanged(ctx, "lint") + cacheRestore() +
-                         composerInstall(phpVersion) +
-                         vendorbinPhan(phpVersion) +
-                         installServer(phpVersion, "sqlite", params["logLevel"]) +
-                         [
-                             {
-                                 "name": "phan",
-                                 "image": OC_CI_PHP % phpVersion,
-                                 "commands": [
-                                     "make test-php-phan",
-                                 ],
-                             },
-                         ],
-                "depends_on": [],
-                "trigger": {
-                    "ref": [
-                        "refs/pull/**",
-                        "refs/tags/**",
-                    ],
-                },
-            }
-
-            pipelines.append(result)
 
     return pipelines
 
@@ -1203,7 +922,7 @@ def javascript(ctx, withCoverage):
         return pipelines
 
     default = {
-        "coverage": True,
+        "coverage": False,
         "logLevel": "2",
         "skip": False,
     }
@@ -1307,22 +1026,10 @@ def phpTests(ctx, testType, withCoverage):
     prDefault = {
         "phpVersions": [DEFAULT_PHP_VERSION],
         "databases": [
-            "sqlite",
-            "mariadb:10.2",
-            "mariadb:10.3",
-            "mariadb:10.4",
-            "mariadb:10.5",
             "mariadb:10.6",
-            "mariadb:10.7",
-            "mariadb:10.8",
             "mariadb:10.11",
-            "mysql:5.5",
-            "mysql:5.7",
-            "mysql:8.0",
-            "postgres:9.4",
-            "postgres:10.21",
         ],
-        "coverage": True,
+        "coverage": False,
         "includeKeyInMatrixName": False,
         "logLevel": "2",
         "cephS3": False,
@@ -1358,7 +1065,7 @@ def phpTests(ctx, testType, withCoverage):
             "postgres:10.21",
             "oracle",
         ],
-        "coverage": True,
+        "coverage": False,
         "includeKeyInMatrixName": False,
         "logLevel": "2",
         "cephS3": False,
@@ -1416,15 +1123,18 @@ def phpTests(ctx, testType, withCoverage):
             else:
                 command = "unknown tbd"
 
-            # Shorten PHP docker tags that have longer names like 7.4-ubuntu22.04
-            phpVersionString = phpVersion.replace("-ubuntu", "-u")
+            # Get the first 3 characters of the PHP version (7.4 or 8.0 etc)
+            # And use that for constructing the pipeline name
+            # That helps shorten pipeline names when using owncloud-ci images
+            # that have longer names like 7.4-ubuntu20.04
+            phpMinorVersion = phpVersion[0:3]
 
             for db in params["databases"]:
                 for externalType in params["externalTypes"]:
                     keyString = "-" + category if params["includeKeyInMatrixName"] else ""
                     filesExternalType = externalType if externalType != "none" else ""
                     externalNameString = "-" + externalType if externalType != "none" else ""
-                    name = "%s%s-php%s-%s%s" % (testType, keyString, phpVersionString, getShortDbNameAndVersion(db), externalNameString)
+                    name = "%s%s-php%s-%s%s" % (testType, keyString, phpMinorVersion, getShortDbNameAndVersion(db), externalNameString)
                     maxLength = 50
                     nameLength = len(name)
                     if nameLength > maxLength:
@@ -1602,7 +1312,6 @@ def acceptance(ctx):
         "browsers": ["chrome"],
         "phpVersions": [DEFAULT_PHP_VERSION],
         "databases": ["mariadb:10.2"],
-        "federatedPhpVersion": DEFAULT_PHP_VERSION,
         "federatedServerNeeded": False,
         "federatedDb": "",
         "filterTags": "",
@@ -1687,10 +1396,18 @@ def acceptance(ctx):
                 extraAppsDict[app] = command
 
             for federatedServerVersion in params["federatedServerVersions"]:
+                federatedPhpVersion = 7.4
+                if (federatedServerVersion == "latest"):
+                    federatedPhpVersion = 7.4
+                if (federatedServerVersion == "git"):
+                    federatedPhpVersion = 8.3
                 for browser in params["browsers"]:
                     for phpVersion in params["phpVersions"]:
-                        # Shorten PHP docker tags that have longer names like 7.4-ubuntu22.04
-                        phpVersionString = phpVersion.replace("-ubuntu", "-u")
+                        # Get the first 3 characters of the PHP version (7.4 or 8.0 etc)
+                        # And use that for constructing the pipeline name
+                        # That helps shorten pipeline names when using owncloud-ci images
+                        # that have longer names like 7.4-ubuntu20.04
+                        phpMinorVersion = phpVersion[0:3]
                         for db in params["databases"]:
                             for runPart in range(1, params["numberOfParts"] + 1):
                                 debugPartsEnabled = (len(params["skipExceptParts"]) != 0)
@@ -1712,7 +1429,7 @@ def acceptance(ctx):
                                     keyString = "-" + category if params["includeKeyInMatrixName"] else ""
                                     partString = "" if params["numberOfParts"] == 1 else "-%d-%d" % (params["numberOfParts"], runPart)
                                     federatedServerVersionString = "-" + federatedServerVersion.replace("daily-", "").replace("-qa", "") if (federatedServerVersion != "") else ""
-                                    name = "%s%s%s%s%s-%s-php%s" % (alternateSuiteName, keyString, partString, federatedServerVersionString, browserString, getShortDbNameAndVersion(db), phpVersionString)
+                                    name = "%s%s%s%s%s-%s-php%s" % (alternateSuiteName, keyString, partString, federatedServerVersionString, browserString, getShortDbNameAndVersion(db), phpMinorVersion)
                                     maxLength = 50
                                     nameLength = len(name)
                                     if nameLength > maxLength:
@@ -1807,20 +1524,20 @@ def acceptance(ctx):
                                              composerInstall(phpVersion) +
                                              vendorbinBehat() +
                                              yarnInstall() +
+                                             waitForServer(params["federatedServerNeeded"]) +
                                              ((
                                                  installCoreFromTarball(params["coreTarball"], db, params["logLevel"], params["useHttps"], params["federatedServerNeeded"], params["proxyNeeded"], pathOfServerUnderTest)
                                              ) if params["testAgainstCoreTarball"] else (
                                                  installServer(phpVersion, db, params["logLevel"], params["useHttps"], params["federatedServerNeeded"], params["proxyNeeded"])
                                              )) +
                                              (
-                                                 installAndConfigureFederated(ctx, federatedServerVersion, params["federatedPhpVersion"], params["logLevel"], protocol, federatedDb, federationDbSuffix) +
+                                                 installAndConfigureFederated(ctx, federatedServerVersion, federatedPhpVersion, params["logLevel"], protocol, federatedDb, federationDbSuffix) +
                                                  owncloudLog("federated", "federated") if params["federatedServerNeeded"] else []
                                              ) +
                                              installExtraApps(phpVersion, extraAppsDict, pathOfServerUnderTest) +
                                              setupCeph(phpVersion, params["cephS3"]) +
                                              setupScality(phpVersion, params["scalityS3"]) +
                                              params["extraSetup"] +
-                                             waitForServer(params["federatedServerNeeded"]) +
                                              waitForEmailService(params["emailNeeded"]) +
                                              waitForBrowserService(browser) +
                                              fixPermissions(phpVersion, params["federatedServerNeeded"], params["selUserNeeded"], pathOfServerUnderTest) +
@@ -1851,7 +1568,7 @@ def acceptance(ctx):
                                                 params["extraServices"] +
                                                 owncloudService(phpVersion, "server", pathOfServerUnderTest, params["useHttps"]) +
                                                 ((
-                                                    owncloudService(params["federatedPhpVersion"], "federated", dir["federated"], params["useHttps"]) +
+                                                    owncloudService(federatedPhpVersion, "federated", dir["federated"], params["useHttps"]) +
                                                     databaseServiceForFederation(federatedDb, federationDbSuffix)
                                                 ) if params["federatedServerNeeded"] else []),
                                     "depends_on": [],
@@ -2392,54 +2109,6 @@ def composerInstall(phpVersion):
         ],
     }]
 
-def vendorbinCodestyle(phpVersion):
-    return [{
-        "name": "vendorbin-codestyle",
-        "image": OC_CI_PHP % phpVersion,
-        "environment": {
-            "COMPOSER_HOME": "%s/.cache/composer" % dir["server"],
-        },
-        "commands": [
-            "make vendor-bin-codestyle",
-        ],
-    }]
-
-def vendorbinCodesniffer(phpVersion):
-    return [{
-        "name": "vendorbin-codesniffer",
-        "image": OC_CI_PHP % phpVersion,
-        "environment": {
-            "COMPOSER_HOME": "%s/.cache/composer" % dir["server"],
-        },
-        "commands": [
-            "make vendor-bin-codesniffer",
-        ],
-    }]
-
-def vendorbinPhan(phpVersion):
-    return [{
-        "name": "vendorbin-phan",
-        "image": OC_CI_PHP % phpVersion,
-        "environment": {
-            "COMPOSER_HOME": "%s/.cache/composer" % dir["server"],
-        },
-        "commands": [
-            "make vendor-bin-phan",
-        ],
-    }]
-
-def vendorbinPhpstan(phpVersion):
-    return [{
-        "name": "vendorbin-phpstan",
-        "image": OC_CI_PHP % phpVersion,
-        "environment": {
-            "COMPOSER_HOME": "%s/.cache/composer" % dir["server"],
-        },
-        "commands": [
-            "make vendor-bin-phpstan",
-        ],
-    }]
-
 def vendorbinBehat():
     return [{
         "name": "vendorbin-behat",
@@ -2578,18 +2247,6 @@ def installServer(phpVersion, db, logLevel = "2", ssl = False, federatedServerNe
         ],
     }]
 
-def enableAppsForPhpStan(phpVersion):
-    return [{
-        "name": "enable-apps-for-phpstan",
-        "image": OC_CI_PHP % phpVersion,
-        "commands": [
-            # files_external can be disabled.
-            # We need it to be enabled so that the PHP static analyser can find classes in it.
-            "php occ a:e files_external",
-            "php occ a:l",
-        ],
-    }]
-
 def installAndConfigureFederated(ctx, federatedServerVersion, phpVersion, logLevel, protocol, db, dbSuffix = "fed"):
     return [
         installFederated(ctx, federatedServerVersion, db, dbSuffix),
@@ -2634,9 +2291,15 @@ def installFederated(ctx, federatedServerVersion, db, dbSuffix = "fed"):
     else:
         installerSettings["version"] = federatedServerVersion
 
+    image = OC_CI_CORE
+    if (federatedServerVersion == "10.9.1"):
+        image = OC_CI_CORE_OLD
+    if (federatedServerVersion == "latest"):
+        image = OC_CI_CORE_OLD
+
     return {
         "name": "install-federated",
-        "image": OC_CI_CORE_NODEJS,
+        "image": image,
         "settings": installerSettings,
     }
 
@@ -2821,7 +2484,7 @@ def installCoreFromTarball(version, db, logLevel = "2", ssl = False, federatedSe
 
     return [{
         "name": "install-tarball",
-        "image": OC_CI_CORE_NODEJS,
+        "image": OC_CI_CORE,
         "settings": {
             "version": version,
             "core_path": pathOfServerUnderTest,
@@ -2875,7 +2538,7 @@ def installFederatedFromTarball(federatedServerVersion, phpVersion, logLevel, pr
     return [
         {
             "name": "install-federated",
-            "image": OC_CI_CORE_NODEJS,
+            "image": OC_CI_CORE,
             "settings": {
                 "version": federatedServerVersion,
                 "core_path": dir["federated"],
@@ -2942,25 +2605,6 @@ def checkStarlark():
                         "failure",
                     ],
                 },
-            },
-        ],
-        "depends_on": [],
-        "trigger": {
-            "ref": [
-                "refs/pull/**",
-            ],
-        },
-    }]
-
-def checkGitCommit():
-    return [{
-        "kind": "pipeline",
-        "type": "docker",
-        "name": "check-git-commit-messages",
-        "steps": [
-            {
-                "name": "format-check-git-commit",
-                "image": "aevea/commitsar:latest",
             },
         ],
         "depends_on": [],

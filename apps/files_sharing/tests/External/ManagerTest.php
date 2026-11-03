@@ -24,6 +24,7 @@
 
 namespace OCA\Files_Sharing\Tests\External;
 
+use Doctrine\DBAL\Result;
 use OC\Files\Storage\StorageFactory;
 use OCA\Files_Sharing\External\Manager;
 use OCA\Files_Sharing\External\MountProvider;
@@ -143,18 +144,6 @@ class ManagerTest extends TestCase {
 			\array_push($called, $event);
 		});
 
-		$event = new GenericEvent(
-			null,
-			[
-				'sharedItem' => '/SharedFolder',
-				'shareAcceptedFrom' => 'foobar',
-				'remoteUrl' => 'http://localhost',
-				'fileId' => null,
-				'shareId' => $openShares[0]['id'],
-				'shareRecipient' => $this->uid,
-			]
-		);
-
 		$this->eventDispatcher
 			->method('dispatch')
 			->withConsecutive(
@@ -166,7 +155,29 @@ class ManagerTest extends TestCase {
 					),
 					AcceptShare::class
 				],
-				[$event, 'remoteshare.accepted']
+				[
+					$this->callback(
+						function (GenericEvent $e) use ($openShares) {
+							if ($e->getArgument('sharedItem') !== '/SharedFolder') {
+								return false;
+							}
+							if ($e->getArgument('shareAcceptedFrom') !== 'foobar') {
+								return false;
+							}
+							if ($e->getArgument('remoteUrl') !== 'http://localhost') {
+								return false;
+							}
+							if ($e->getArgument('shareId') !== $openShares[0]['id']) {
+								return false;
+							}
+							if ($e->getArgument('shareRecipient') !== $this->uid) {
+								return false;
+							}
+							return true;
+						}
+					),
+					'remoteshare.accepted'
+				]
 			);
 
 		// Accept the first share
@@ -371,11 +382,12 @@ class ManagerTest extends TestCase {
 
 		$this->mountManager = $this->createMock(\OC\Files\Mount\Manager::class);
 		$idbConnection = $this->createMock(\OCP\IDBConnection::class);
-		$prepare = $this->createMock(\Doctrine\DBAL\Driver\Statement::class);
-		$prepare->method('execute')
-			->willReturn(true);
-		$idbConnection->method('prepare')
-			->willReturn($prepare);
+		$prepare = $this->createMock(\Doctrine\DBAL\Statement::class);
+		$result = $this->createMock(Result::class);
+		$result->method('fetchAssociative')->willReturn(false);
+		$prepare->method('executeQuery')->willReturn($result);
+		$prepare->method('executeStatement')->willReturn(1);
+		$idbConnection->method('prepare')->willReturn($prepare);
 		$storageFactory = $this->createMock(\OCP\Files\Storage\IStorageFactory::class);
 		$this->manager = new Manager(
 			$idbConnection,
@@ -422,7 +434,24 @@ class ManagerTest extends TestCase {
 		$this->assertArrayHasKey('user', $called[1]);
 	}
 
-	public function testRemoteWithValidHttps(): void {
+	public function providesRemoteAddress() {
+		return [
+			[
+				'owncloud.com',
+			],
+			[
+				'owncloud.com/cloud',
+			],
+			[
+				'owncloud.com/cloud/',
+			],
+		];
+	}
+
+	/**
+	 * @dataProvider providesRemoteAddress
+	 */
+	public function testRemoteWithValidHttps($remoteAddress): void {
 		$client = $this->getMockBuilder(IClient::class)
 			->disableOriginalConstructor()->getMock();
 		$response = $this->getMockBuilder(IResponse::class)
@@ -441,10 +470,13 @@ class ManagerTest extends TestCase {
 			->method('newClient')
 			->willReturn($client);
 
-		$this->assertEquals('https', $this->manager->testRemoteUrl($clientService, 'owncloud.com'));
+		$this->assertEquals('https', $this->manager->testRemoteUrl($clientService, $remoteAddress));
 	}
 
-	public function testRemoteWithWorkingHttp(): void {
+	/**
+	 * @dataProvider providesRemoteAddress
+	 */
+	public function testRemoteWithWorkingHttp($remoteAddress): void {
 		$client = $this->getMockBuilder(IClient::class)
 			->disableOriginalConstructor()->getMock();
 		$response = $this->getMockBuilder(IResponse::class)
@@ -463,7 +495,7 @@ class ManagerTest extends TestCase {
 			->method('newClient')
 			->willReturn($client);
 
-		$this->assertEquals('http', $this->manager->testRemoteUrl($clientService, 'owncloud.com'));
+		$this->assertEquals('http', $this->manager->testRemoteUrl($clientService, $remoteAddress));
 	}
 
 	public function testRemoteWithInvalidRemote(): void {

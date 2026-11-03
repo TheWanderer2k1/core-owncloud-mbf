@@ -98,7 +98,13 @@ describe('OC.SetupChecks tests', function() {
 
 	describe('checkDataProtected', function() {
 
-		oc_dataURL = "data";
+		beforeEach(function() {
+			oc_dataURL = "data";
+		});
+
+		afterEach(function() {
+			oc_dataURL = "data";
+		});
 
 		it('should return an error if data directory is not protected', function(done) {
 			var async = OC.SetupChecks.checkDataProtected();
@@ -153,9 +159,7 @@ describe('OC.SetupChecks tests', function() {
 
 	describe('checkSetup', function() {
 		it('should return an error if server has no internet connection', function(done) {
-			var async = OC.SetupChecks.checkSetup();
-
-			suite.server.requests[0].respond(
+			suite.server.respondWith([
 				200,
 				{
 					'Content-Type': 'application/json'
@@ -168,7 +172,10 @@ describe('OC.SetupChecks tests', function() {
 					isCorrectMemcachedPHPModuleInstalled: true,
 					hasPassedCodeIntegrityCheck: true,
 				})
-			);
+			]);
+			var async = OC.SetupChecks.checkSetup();
+			suite.server.respond();
+
 
 			async.done(function( data, s, x ){
 				expect(data).toEqual([

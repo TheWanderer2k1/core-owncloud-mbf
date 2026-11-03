@@ -25,6 +25,8 @@
 namespace OC\Preview;
 
 use Imagick;
+use OC\Image\ImagickFactory;
+use OC\Preview;
 use OCP\Files\File;
 use OCP\Files\FileInfo;
 use OCP\Preview\IProvider2;
@@ -40,21 +42,41 @@ abstract class Bitmap implements IProvider2 {
 	 * {@inheritDoc}
 	 */
 	public function getThumbnail(File $file, $maxX, $maxY, $scalingUp) {
+		if (Preview::isImageFileSizeTooBig($file)) {
+			return false;
+		}
 		$stream = $file->fopen('r');
-
-		// Creates \Imagick object from bitmap or vector file
-		try {
-			$bp = $this->getResizedPreview($stream, $maxX, $maxY);
-		} catch (\Exception $e) {
-			Util::writeLog('core', 'ImageMagick says: ' . $e->getmessage(), Util::ERROR);
+		if (!\is_resource($stream)) {
+			// stream_get_contents() below would raise a TypeError, which is an \Error and
+			// so would escape the handler underneath rather than degrade to no preview.
+			// Not a === false check: View::fopen() returns null for a path
+			// isForbiddenFileOrDir() rejects and for one Filesystem::resolvePath() finds no
+			// storage for, and fclose(null) in the finally below is a TypeError of its own.
+			Util::writeLog('core', 'Could not open ' . $file->getPath() . ' for a preview', Util::ERROR);
 			return false;
 		}
 
-		\fclose($stream);
+		// Creates \Imagick object from bitmap or vector file
+		try {
+			// cast on purpose: getMimeType() reaches a string-typed parameter, but it comes
+			// from FileInfo::getMimetype(), which hands back whatever Cache::get() stored -
+			// and that is MimeTypeLoader::getMimetypeById(), null for an id with no row in
+			// oc_mimetypes. No foreign key guards that column, so a dangling id is
+			// reachable, and an uncast null would raise a TypeError. Being an \Error that
+			// escapes the handler below, it would turn a missing preview into a 500.
+			$bp = $this->getResizedPreview($stream, $maxX, $maxY, (string)$file->getMimeType());
+		} catch (\Exception $e) {
+			Util::writeLog('core', 'ImageMagick says: ' . $e->getmessage(), Util::ERROR);
+			return false;
+		} finally {
+			// also on the failure path: any content ImageMagick has no coder for lands
+			// here, so leaking the handle would be routine rather than exceptional
+			\fclose($stream);
+		}
 
 		//new bitmap image object
 		$image = new \OC_Image();
-		$image->loadFromData($bp);
+		$image->loadFromData((string)$bp);
 		//check if image object is valid
 		return $image->valid() ? $image : false;
 	}
@@ -77,21 +99,92 @@ abstract class Bitmap implements IProvider2 {
 	 * @param resource $stream the handle of the file to convert
 	 * @param int $maxX
 	 * @param int $maxY
+	 * @param string $mimeType the file's own detected mime type, used to pin the
+	 *   Imagick coder so it cannot be redirected by the file's actual content
 	 *
-	 * @return \Imagick
+	 * @return Imagick
 	 */
-	private function getResizedPreview($stream, $maxX, $maxY) {
-		$bp = new Imagick();
+	private function getResizedPreview($stream, int $maxX, int $maxY, string $mimeType): Imagick {
+		$content = \stream_get_contents($stream);
+
+		if ($this->isDangerousToDecode($content)) {
+			throw new \RuntimeException('Refusing to decode text-based content for a bitmap preview');
+		}
+
+		$bp = ImagickFactory::create();
+
+		# Pin the coder instead of letting Imagick's own content-sniffing pick one:
+		# reading with no format set re-derives the format from a ~130-entry magic
+		# table independently of isDangerousToDecode()'s check above, so content that
+		# looks like PostScript/PDF (which that check must allow through for the
+		# Postscript/PDF providers) would otherwise reach the Ghostscript delegate via
+		# any Bitmap provider, not just those two.
+		#
+		# Deliberately not guarded by queryFormats(): if this build does not register
+		# the coder, throwing here is correct - the only alternative is falling back to
+		# the content-sniffing this pin exists to prevent.
+		$bp->setFormat($this->getImagickFormat($mimeType));
+		$bp->readImageBlob($content);
 
 		# setIteratorIndex(0) will make previews to be generated from the first page
-		$bp->readImageFile($stream);
 		$bp->setIteratorIndex(0);
 
 		$bp = $this->resize($bp, $maxX, $maxY);
 
+		# setFormat() above pins the wand's *output* format as well as the input coder,
+		# so both have to be set here. setImageFormat() alone would leave getThumbnail()'s
+		# (string) cast re-encoding back to the pinned input format instead of PNG.
 		$bp->setImageFormat('png');
+		$bp->setFormat('png');
 
 		return $bp;
+	}
+
+	/**
+	 * Maps this provider's own detected mime type(s) to the Imagick coder name that
+	 * must decode them - the format pinned in getResizedPreview() above.
+	 *
+	 * $mimeType comes from $file->getMimeType(), deliberately not from the type that
+	 * selected this provider (OC\Preview::$mimeType). Those two can differ, because
+	 * callers may override the selection type via getThumbnail(['mimeType' => ...]) -
+	 * apps/files_trashbin/ajax/preview.php does, and apps/dav passes the request's query
+	 * parameters straight through. The file's own type cannot be steered by a request,
+	 * which is the property the pin depends on.
+	 *
+	 * The consequence is that an implementation must cope with a mime type it does not
+	 * serve: a trashed file reports application/octet-stream, because the .d<timestamp>
+	 * suffix defeats extension-based detection. Returning a constant handles that
+	 * correctly. Do NOT "fix" the divergence by rejecting a $mimeType that fails this
+	 * provider's own getMimeType() regex - that rejects every trashbin preview.
+	 */
+	abstract protected function getImagickFormat(string $mimeType): string;
+
+	/**
+	 * Bitmap providers must never hand text-based content (SVG, XML, or any other
+	 * text/* type, e.g. a raw MVG script) to Imagick::readImageBlob() - ImageMagick's
+	 * text/vector coders can be abused to read and write arbitrary files.
+	 *
+	 * Known limitation, pre-dating this check and deliberately not closed here: the
+	 * deny-list can only be as good as the detection behind it. Detection::detectString()
+	 * needs either ext-fileinfo or the "file" binary, and ext-fileinfo is not actually
+	 * required to run ownCloud - OC_Util::checkServer() does not list it, and
+	 * OC_Util::fileInfoLoaded() only raises an admin-panel recommendation. On an install
+	 * with neither, every payload is reported as application/octet-stream and this method
+	 * returns false for all of them, leaving the per-provider coder pin in
+	 * getResizedPreview() as the only remaining layer. Failing closed instead would cost
+	 * every bitmap preview on a configuration ownCloud supports, which is why it is
+	 * recorded here rather than rejected.
+	 */
+	private function isDangerousToDecode(string $content): bool {
+		$mimeType = \OC::$server->getMimeTypeDetector()->detectString($content);
+		$mimeType = \strtolower(\trim(\explode(';', $mimeType, 2)[0]));
+
+		// libmagic reports "image/svg" without the "+xml" suffix on some PHP/OS builds
+		if (\strpos($mimeType, 'text/') === 0 || \strpos($mimeType, 'image/svg') === 0) {
+			return true;
+		}
+
+		return \in_array($mimeType, ['application/xml', 'image/x-mvg'], true);
 	}
 
 	/**

@@ -153,8 +153,8 @@ class Database extends \OC\Group\Backend {
 			->andWhere($qb->expr()->eq('uid', $qb->createNamedParameter($uid)))
 			->execute();
 
-		$result = $cursor->fetch();
-		$cursor->closeCursor();
+		$result = $cursor->fetchAssociative();
+		$cursor->free();
 
 		return $result ? true : false;
 	}
@@ -222,11 +222,11 @@ class Database extends \OC\Group\Backend {
 			->execute();
 
 		$groups = [];
-		while ($row = $cursor->fetch()) {
+		while ($row = $cursor->fetchAssociative()) {
 			$groups[] = $row["gid"];
 			$this->groupCache[$row['gid']] = $row['gid'];
 		}
-		$cursor->closeCursor();
+		$cursor->free();
 
 		return $groups;
 	}
@@ -256,12 +256,13 @@ class Database extends \OC\Group\Backend {
 			$searchLike = ' WHERE LOWER(`gid`) LIKE LOWER(?)';
 		}
 
-		$stmt = \OC_DB::prepare('SELECT `gid` FROM `*PREFIX*groups`' . $searchLike . ' ORDER BY `gid` ASC', $limit, $offset);
-		$result = $stmt->execute($parameters);
+		$stmt = $this->dbConn->prepare('SELECT `gid` FROM `*PREFIX*groups`' . $searchLike . ' ORDER BY `gid` ASC', $limit, $offset);
+		$result = $stmt->executeQuery($parameters);
 		$groups = [];
-		while ($row = $result->fetchRow()) {
+		while ($row = $result->fetchAssociative()) {
 			$groups[] = $row['gid'];
 		}
+		$result->free();
 		return $groups;
 	}
 
@@ -283,8 +284,8 @@ class Database extends \OC\Group\Backend {
 			->from('groups')
 			->where($qb->expr()->eq('gid', $qb->createNamedParameter($gid)))
 			->execute();
-		$result = $cursor->fetch();
-		$cursor->closeCursor();
+		$result = $cursor->fetchAssociative();
+		$cursor->free();
 
 		if ($result !== false) {
 			$this->groupCache[$gid] = $gid;
@@ -311,16 +312,17 @@ class Database extends \OC\Group\Backend {
 			$searchLike = ' AND `uid` LIKE ?';
 		}
 
-		$stmt = \OC_DB::prepare(
+		$stmt = $this->dbConn->prepare(
 			'SELECT `uid` FROM `*PREFIX*group_user` WHERE `gid` = ?' . $searchLike . ' ORDER BY `uid` ASC',
 			$limit,
 			$offset
 		);
-		$result = $stmt->execute($parameters);
+		$result = $stmt->executeQuery($parameters);
 		$users = [];
-		while ($row = $result->fetchRow()) {
+		while ($row = $result->fetchAssociative()) {
 			$users[] = $row['uid'];
 		}
+		$result->free();
 		return $users;
 	}
 
@@ -341,12 +343,13 @@ class Database extends \OC\Group\Backend {
 			$searchLike = ' AND `uid` LIKE ?';
 		}
 
-		$stmt = \OC_DB::prepare('SELECT COUNT(`uid`) AS `count` FROM `*PREFIX*group_user` WHERE `gid` = ?' . $searchLike);
-		$result = $stmt->execute($parameters);
+		$stmt = $this->dbConn->prepare('SELECT COUNT(`uid`) AS `count` FROM `*PREFIX*group_user` WHERE `gid` = ?' . $searchLike);
+		$result = $stmt->executeQuery($parameters);
 		$count = $result->fetchOne();
 		if ($count !== false) {
-			$count = \intval($count);
+			$count = (int)$count;
 		}
+		$result->free();
 		return $count;
 	}
 

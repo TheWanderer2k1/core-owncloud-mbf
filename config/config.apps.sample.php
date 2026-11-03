@@ -43,7 +43,7 @@ $CONFIG = [
 'log.conditions' => [
   [
 	'apps' => ['admin_audit'],
-	  // Adjust the path below, to match your setup
+	  // Adjust the path below to match your setup
 	'logfile' => '/var/www/owncloud/data/admin_audit.log'
   ],
 ],
@@ -62,7 +62,7 @@ $CONFIG = [
  */
 
 /**
- * Default path to the _clamscan_ command line anti-virus scanner.
+ * The default path to the _clamscan_ command line anti-virus scanner.
  * This setting only applies when the operating mode of the `files_antivirus` app is set to executable mode.
  * See the documentation for more details.
  */
@@ -80,10 +80,10 @@ $CONFIG = [
  *
  * Possible key: `files_pdfviewer.enableScripting` STRING
  *
- * PDF files may contain JavaScript which for example can be necessary to process editable fields.
+ * PDF files may contain JavaScript, which, for example, can be necessary to process editable fields.
  * Under normal circumstances and for security reasons, scripts are not allowed to be processed. To allow
  * processing these scripts, the following config key can be set. Note that enabling scripting can be
- * a major security issue and should be considered as possible thread vector.
+ * a major security issue and should be considered as a possible threat vector.
  *
  */
 
@@ -99,18 +99,34 @@ $CONFIG = [
  *
  * Possible key: `versions_retention_obligation` STRING
  *
- * Use following values to configure the retention behaviour. Replace `D` with the number of days.
+ * Define the files versions retention obligation
+ * If the versions app is enabled (default), this setting defines the policy
+ * for when versions will be permanently deleted.
+ * The app allows for two settings, a minimum time for version retention,
+ * and a maximum time for version retention.
+ * Minimum time is the number of days a version will be kept, after which it
+ * may be deleted. Maximum time is the number of days at which it is guaranteed
+ * to be deleted.
+ * Both minimum and maximum times can be set together to explicitly define
+ * version deletion. For migration purposes, this setting is installed
+ * initially set to "auto", which is equivalent to the default setting in
+ * ownCloud 8.1 and before.
  *
- * auto::
- * Default value if nothing is set
- * D, auto::
- * Keep versions at least for D days, apply expiration rules to all versions that are older than D days
- * auto, D::
- * Delete all versions that are older than D days automatically, delete other versions according to expiration rules
- * D1, D2::
- * Keep versions for at least D1 days and delete when they exceed D2 days
- * disabled::
- * Disable Versions; no files will be deleted.
+ * Available values:
+ * `auto`
+ * default setting. Automatically expire versions according to expire
+ * rules. Please refer to https://doc.owncloud.com/server/latest/admin_manual/configuration/files/file_versioning.html
+ * for more information.
+ * `D, auto`
+ * keep versions at least for D days, apply expiry rules to all versions
+ * that are older than D days
+ * `auto, D`
+ * delete all versions that are older than D days automatically, delete
+ * other versions according to expire rules
+ * `D1, D2`
+ * keep versions for at least D1 days and delete when exceeds D2 days
+ * `disabled`
+ * versions auto clean disabled, versions will be kept forever
  */
 
 /**
@@ -164,14 +180,14 @@ $CONFIG = [
 
 /**
  * Kerberos SPNEGO Timeout
- * Timeout before re-enabling SPNEGO based authentication after logout, defaults to 60 seconds.
+ * Timeout before re-enabling SPNEGO-based authentication after logout, defaults to 60 seconds.
  */
 
 'kerberos.suppress.timeout' => 60,
 
 /**
  * Kerberos Domain
- * The domain name - remove from principals to match the pure user name.
+ * The domain name is removed from principals to match the pure username.
  * Example: 'alice@corp.dir' will look for the user 'alice' in LDAP if 'kerberos.domain' is set to 'corp.dir'.
  */
 
@@ -301,58 +317,105 @@ $CONFIG = [
 'wopi.business-flow.enabled' => 'no',
 
 /**
- * App: Microsoft Teams Bridge
- *
- * Possible key: `msteamsbridge` ARRAY
- *
- * Sub key: `loginButtonName` STRING
- */
-
-/**
- * Login Button Label
- * This key is necessary for security reasons. Users will be asked to click a login
- * button each time when accessing the ownCloud app after a fresh start of their
- * Microsoft Teams app or after idle time. This behavior is by design. The button
- * name can be freely set based on your requirements.
- */
-'msteamsbridge' => [
-   "loginButtonName" => "Login to ownCloud with Azure AD",
-],
-
-/**
  * App: OpenID Connect (OIDC)
  *
  * Possible key: `openid-connect` ARRAY
  *
  *
- * **Configure OpenID Connect - all possible sub-keys**
+ * **Configure OpenID Connect - all possible subkeys**
  *
- * _You have to use the main key `openid-connect` together with sub keys listed below, see code samples._
+ * _You have to use the main key `openid-connect` together with subkeys listed below, see code samples._
  *
  * allowed-user-backends::
- * Limit the users which are allowed to login to a specific user backend - e.g. LDAP
+ * Limit the users which are allowed to log in to a specific user backend - e.g. LDAP
  * (`'allowed-user-backends' ⇒ ['LDAP']`)
  *
+ * audience::
+ * The value your identity provider puts into the access token's `aud` (audience) claim. Once set,
+ * an access token is accepted only if `aud` names it, and no other claim is used to identify
+ * ownCloud. Takes a single non-empty string or a list of them, and *replaces* `client-id` as the
+ * expected value rather than adding to it. `null` counts as not set; any other unusable value - a
+ * number, a boolean, an empty string, an empty list - is dropped with a warning naming it, and if
+ * nothing usable is left every access token is rejected, so a typo here fails closed.
+ * +
+ * Available starting app version 2.4.2. Without the key, 2.4.2 accepts an access token whose `aud`
+ * carries the `client-id`, and also one whose `azp`, `appid` or `client_id` claim does - which is
+ * what keeps providers working that put the *resource server* into `aud`, as RFC 9068 section 3
+ * defines it. Of those three claims only the most authoritative one the token actually carries is
+ * consulted, in that order, so a token that reaches this fallback with an `azp` naming a different
+ * client is refused even where a `client_id` names ownCloud. App version 2.4.1 has neither this key
+ * nor that fallback: there the `client-id` had to appear in `aud`, so a provider naming the
+ * resource instead could not authenticate at all with JWT access tokens. 2.4.1 does not check the
+ * audience of an opaque token verified through an introspection endpoint; 2.4.2 checks both. Which
+ * provider sends what, and what can be done on 2.4.1, is documented at
+ * https://doc.owncloud.com/server/11.0/admin_manual/configuration/user/oidc/oidc.html#access-token-audience
+ * +
+ * Microsoft ADFS is one of the providers that names the resource: it prefixes the identifier of
+ * the application the token was issued for with `microsoft:identityserver:`, unless that
+ * identifier is already a URL, in which case it is sent verbatim. Read the identifier with
+ * `Get-AdfsWebApiApplication` for an OpenID Connect application group registration, or with
+ * `Get-AdfsRelyingPartyTrust` for a legacy WS-Federation or SAML relying party trust. It is often
+ * configured to the same GUID as the `client-id`, which is why the prefixed value frequently
+ * repeats it - but it is a *resource* identifier, not the client, and the two are free to differ.
+ * Whatever your provider sends has to be reproduced here exactly, including case: the comparison is
+ * strict, so a difference in casing, or a numeric `aud` against a string here, will not match.
+ * +
+ * Setting it binds tokens to the *resource*: one that ownCloud's own client obtained for a
+ * different resource of the same provider - through an RFC 8707 `resource` parameter or an RFC 8693
+ * token exchange - stops being accepted. What it does not bind is the *client*: any token whose
+ * `aud` names ownCloud is accepted whichever client requested it. So choose a value only ownCloud
+ * can be issued a token for, do not reuse a tenant-wide resource identifier here, and control in
+ * the provider which clients may ask for it.
+ * +
+ * ID tokens are a separate matter, and this key is not on its own what decides them. Starting with
+ * app version 2.4.2 a token that labels its own type has to label itself an access token, so where
+ * the provider puts the ID token's type in the payload - `typ` of `ID` on Keycloak, `token_use` of
+ * `id` on AWS Cognito - the token is refused whatever this key says, including not set at all.
+ * Where the provider puts no type claim in the payload, as Entra ID and ADFS do not, an ID token
+ * still satisfies the default expectation, since an ID token's `aud` is the `client-id` by
+ * definition: it is accepted for as long as the `client-id` is an accepted audience, and setting
+ * this key to anything else is then what rejects it, as a side effect rather than as this key's
+ * purpose. Where setting it is not an option, treat ID tokens as credentials.
+ * +
+ * Do not set the key at all if your token introspection response omits `aud`, which RFC 7662
+ * permits, because every opaque token would then be rejected. And with
+ * `exchange-token-mode-before-introspection`, the first usable entry is also the audience the
+ * token exchange requests, so list the resource ownCloud should be given first.
+ *
  * auth-params::
- * Additional parameters which are sent to the IdP during the auth requests
+ * Additional parameters, which are sent to the IdP during the auth requests
  *
  * autoRedirectOnLoginPage::
  * If `true`, the ownCloud login page will redirect directly to the Identity Provider
  * login without requiring the user to click a button. The default is `false`.
  *
  * auto-provision::
- * If `auto-provision` is setup, an ownCloud user will be created if not exists, after successful
+ * If `auto-provision` is set up, an ownCloud user will be created if not exists, after successful
  * login using openid connect. The config parameters `mode` and `search-attribute` will be used
  * to create a unique user so that the lookup mechanism can find the user again. This is where
  * an LDAP setup is usually required. The profile picture will only be transferred upon account
  * creation, but will not be updated afterwards if it changes in the connected IdP.
- * If `auto-provision` is not setup or required, it is expected that the user exists and you
+ * If `auto-provision` is not set up or required, it is expected that the user exists, and you
  * MUST declare this with `['enabled' => false]` like shown in the Easy Setup example.
- * `auto-provision` holds several sub keys, see the example setup with the explanations below.
+ * `auto-provision` holds several subkeys, see the example setup with the explanations below.
  *
  * auto-update::
  * When using the provisioning mode `auto-update`, user account info will update with the current
- * information provided by the OpenID Connect provider upon each user log in.
+ * information provided by the OpenID Connect provider upon each user login.
+ *
+ * exchange-token-mode-before-introspection::
+ * If set, an RFC 8693 token exchange is performed before a token is introspected, and the
+ * exchanged token is what gets verified. The value selects the subject token type: `refresh-token`
+ * uses `urn:ietf:params:oauth:token-type:refresh_token`, and `access-token` - which is also what
+ * any other value falls back to - uses `urn:ietf:params:oauth:token-type:access_token`. The
+ * subject is taken from the OpenID Connect login session while a session is being verified, so it
+ * requires such a session: on a request authenticated by a bearer token alone there is none, and
+ * the exchange is attempted with an empty subject token and fails. When user information is read
+ * the subject is the client's current refresh or access token instead, and only if
+ * `use-access-token-introspection-for-user-info` is set as well. The audience requested for the
+ * exchanged token is the first usable entry of `audience`, the `client-id` when `audience` is not
+ * set, and none at all when `audience` is set but holds nothing usable. Use one of the two values
+ * or leave the key out: an empty or otherwise falsy value is not treated alike on both paths.
  *
  * insecure::
  * Boolean value (`true`/`false`), no SSL verification will take place when talking to the
@@ -373,6 +436,20 @@ $CONFIG = [
  * This is the attribute in the owncloud accounts table to search for users.
  * The default value is `email`. The alternative value is: `userid`.
  *
+ * ocis-routing-policy-claim::
+ * For setups that run ownCloud Classic and ownCloud Infinite Scale side by side behind a proxy:
+ * the user information claim that holds the routing policy. After a successful login, when the
+ * claim is present, its value is written to the cookie named by `ocis-routing-policy-cookie` so
+ * that the proxy can route the user to the right backend. The default is `ocis.routing.policy`.
+ *
+ * ocis-routing-policy-cookie::
+ * Name of the cookie the value of `ocis-routing-policy-claim` is written to. The default is
+ * `owncloud-selector`.
+ *
+ * ocis-routing-policy-cookie-directives::
+ * Directives appended to the routing policy cookie, for example to scope or to secure it. The
+ * default is `path=/;`.
+ *
  * post_logout_redirect_uri::
  * A given URL where the IdP should redirect to after logout.
  *
@@ -380,7 +457,7 @@ $CONFIG = [
  * Additional config array depending on the IdP to be entered here - usually only necessary if
  * the IdP does not support service discovery.
  *
- * provider-url, client-id and client-secret::
+ * provider-url, client-id, and client-secret::
  * Variables are to be taken from the OpenID Connect Provider's setup.
  * For the `provider-url`, the URL where the IdP is living.
  * In some cases (KeyCloak, Azure AD) this holds more than just a domain but also a path.
@@ -405,9 +482,19 @@ $CONFIG = [
  * token-introspection-endpoint-client-secret::
  * Client secret to be used with the token introspection endpoint.
  *
+ * use-access-token-introspection-for-user-info::
+ * If set to `true`, user information is read from the token introspection response instead of from
+ * the userinfo endpoint, using `token-introspection-endpoint-client-id` and
+ * `token-introspection-endpoint-client-secret` and honouring
+ * `exchange-token-mode-before-introspection`. `use-access-token-payload-for-user-info` is
+ * evaluated first and wins for a JWT access token; an opaque token has no payload to read, so the
+ * introspection response is used even when both keys are set.
+ *
  * use-access-token-payload-for-user-info::
- * If set to `true` any user information will be read from the access token.
- * If set to `false` the userinfo endpoint is used (starting app version 1.1.0).
+ * If set to `true`, any user information will be read from the access token.
+ * If set to `false`, the userinfo endpoint is used (starting app version 1.1.0) - unless
+ * `use-access-token-introspection-for-user-info` is set, which takes the introspection response
+ * instead.
  *
  */
 
@@ -450,7 +537,7 @@ $CONFIG = [
 		  // no provisioning will be made, "User not found" will be returned
 		'provisioning-attribute' => 'owncloud',
 		  // auto-update user account info with current information provided by the
-		  // OpenID Connect provider account attributes, that will be updated,
+		  // OpenID Connect provider account attributes that will be updated
 		  // can be specified in `attributes` config option
 		'update' => ['enabled' => true],
 		  // enable the user info auto-update mode
@@ -571,7 +658,7 @@ $CONFIG = [
 
 /**
  * Enable to Push WND Events to the Activity App
- * Register WND as extension into the Activity app in order to send information about what
+ * Register WND as extension into the Activity app to send information about what
  * the `wnd:process-queue` command is doing. The activity sent will be based on what
  * the `wnd:process-queue` detects, and the activity will be sent to each affected user. There
  * won't be any activity being sent outside of the `wnd:process-queue` command.
@@ -602,7 +689,7 @@ $CONFIG = [
 /**
  * Reset the Password When Receiving Any of the Following Error Codes.
  * By default, we will reset the password with error code 13, which means
- * access denied. Depending on circumstances, you might want to add the
+ * access is denied. Depending on circumstances, you might want to add the
  * error code 1, which means an operation not permitted (although there could
  * be cases where this "operation not permitted" might not be caused by a wrong
  * password).
@@ -617,7 +704,7 @@ $CONFIG = [
  * - `'wnd.errorCodes.passwordReset' => [],`
  *
  * Note that disabling the password reset feature can lead to an account lockout
- * if such feature is enabled in the target windows / samba machine.
+ * if this feature is enabled in the target windows / samba machine.
  */
 'wnd.errorCodes.passwordReset' => [13],
 
@@ -663,7 +750,7 @@ $CONFIG = [
  * Enable or Disable the WND In-Memory Notifier for Password Changes
  * Having this feature enabled implies that whenever a WND process detects a
  * wrong password in the storage - maybe the password has changed in the
- * backend - all WND storages that are in-memory will be notified in order to reset
+ * backend - all WND storages that are in-memory will be notified to reset
  * their passwords if applicable and not to requery again.
  * The intention is to prevent a potential password lockout for the user in the backend.
  * As with PHP lower than 7.4, this feature can take a lot of memory resources.
@@ -679,7 +766,7 @@ $CONFIG = [
  * A map of servers with the required data to get the Kerberos credentials
  * in order to access them.
  *
- * Each key of the map must be unique and identifies a server. This ID will
+ * Each key of the map must be unique and identify a server. This ID will
  * be used in the web UI to configure the mount points to use the Kerberos
  * authentication. You can use any ID (choose one meaningful and easy to remember).
  *
@@ -693,7 +780,7 @@ $CONFIG = [
  * the file manually before the expiration. See the Kerberos documentation for details.
  *
  * - `ocservice` (required): The name of the service of the account. This matches
- * the SPN of the Windows / Samba account. It usually is in the form "HTTP/<hostname>",
+ * the SPN of the Windows / Samba account. It is usually in the form "HTTP/<hostname>",
  * but it might be different. See the Kerberos documentation for details.
  *
  * - `usermapping` (optional): The ownCloud-to-windows user mapping to be used. See below
@@ -714,11 +801,11 @@ $CONFIG = [
  *
  * - `RemoveDomain`: Remove the domain (if any) from the ownCloud user ID.
  * This means that "user001@my.dom.com" will map to "user001". Note that
- * it's assumed that all users belong to the same domain, otherwise
- * "user001@my.dom.com" will be mapped to the same windows user as
+ * it's assumed that all users belong to the same domain. Otherwise
+ * "user001@my.dom.com" will be mapped to the same Windows user as
  * "user001@not.mine.eu".
  *
- * - `EALdapAttr`: Use ownCloud's user extended attributes to map the ownCloud
+ * - `EALdapAttr`: Use ownCloud's user-extended attributes to map the ownCloud
  * user to the target LDAP attribute. The mapping has 2 parameters:
  * * `attr`: in order to select the LDAP attribute you want to use. Note
  * that it's required that the user_ldap app exposes the chosen attribute which
@@ -789,7 +876,7 @@ $CONFIG = [
 
 /**
  * Manage UTF-8 Glyph Normalization on macOS
- * A glyph is a character like `&#xF1;` as used in the spanish word `se&#xF1;orita` which can be composed by two different byte sequences.
+ * A glyph is a character like `&#xF1;` as used in the Spanish word `se&#xF1;orita` which can be composed by two different byte sequences.
  * With https://www.utf8-chartable.de/unicode-utf8-table.pl?number=1024&unicodeinhtml=hex[UTF-8], glyphs can have two valid representations of these sequences in filesystems.
  * https://unicode.org/reports/tr15/#Norm_Forms[Normalization] makes it possible to determine whether any two Unicode strings are equivalent.
  * The most used normalization forms are NFC and NFD. By default, ownCloud usually normalizes names to NFC.
@@ -808,8 +895,8 @@ $CONFIG = [
  * cache wrapper implementation. The value will be used by all WND2 storages. Although the
  * cache isn't exactly per user but per storage id, consider the cache to be per user, because
  * it will be like that for common use cases. Data will remain in the cache and won't
- * be removed by ownCloud. Aim for a low TTL value in order to not fill the memcache
- * completely. In order to properly disable caching, use -1 or any negative value. 0 (zero)
+ * be removed by ownCloud. Aim for a low TTL value to not fill the memcache.
+ * To properly disable caching, use -1 or any negative value. 0 (zero)
  * isn't considered a valid TTL value and will also disable caching.
  */
 'wnd2.cachewrapper.ttl' => 1800,  // 30 minutes
@@ -824,7 +911,7 @@ $CONFIG = [
 
 /**
  * Provide Advanced Management of File Tagging
- * Enables admins to specify rules and conditions (file size, file mimetype, group membership and more)
+ * Enables admins to specify rules and conditions (file size, file mimetype, group membership, and more)
  * to automatically assign tags to uploaded files. Values: `tagbased` (default) or `userbased`.
  */
 

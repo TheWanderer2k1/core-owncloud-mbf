@@ -34,6 +34,7 @@ namespace OC;
 use OC\Files\Filesystem;
 use OC\Files\View;
 use OCA\Files_Sharing\SharedMount;
+use OCP\Files\File;
 use OCP\Files\FileInfo;
 use OCP\Files\Folder;
 use OCP\Files\Node;
@@ -1082,6 +1083,22 @@ class Preview {
 	}
 
 	/**
+	 * @param File $file
+	 * @return bool
+	 * @throws \OCP\Files\InvalidPathException
+	 * @throws \OCP\Files\NotFoundException
+	 */
+	public static function isImageFileSizeTooBig(File $file): bool {
+		$maxSizeForImages = \OC::$server->getConfig()->getSystemValue('preview_max_filesize_image', 50);
+		if ($maxSizeForImages === -1) {
+			return false;
+		}
+		$size = $file->getSize();
+
+		return $size > ($maxSizeForImages * 1024 * 1024);
+	}
+
+	/**
 	 * Asks the provider to send a preview of the file which respects the maximum dimensions
 	 * defined in the configuration and after saving it in the cache, it is then resized to the
 	 * asked dimensions
@@ -1099,7 +1116,7 @@ class Preview {
 		$previewProviders = \OC::$server->getPreviewManager()
 			->getProviders();
 		foreach ($previewProviders as $supportedMimeType => $providers) {
-			if (!\preg_match($supportedMimeType, $this->mimeType)) {
+			if (!\preg_match($supportedMimeType, $this->mimeType ?? '')) {
 				continue;
 			}
 

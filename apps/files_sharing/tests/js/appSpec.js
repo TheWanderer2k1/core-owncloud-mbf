@@ -58,14 +58,18 @@ describe('OCA.Sharing.App tests', function() {
 	});
 	describe('file actions', function() {
 		var oldLegacyFileActions;
+		var oldFileActions;
 
 		beforeEach(function() {
 			oldLegacyFileActions = window.FileActions;
 			window.FileActions = new OCA.Files.FileActions();
+			oldFileActions = OCA.Files.fileActions;
+			OCA.Files.fileActions = new OCA.Files.FileActions();
 		});
 
 		afterEach(function() {
 			window.FileActions = oldLegacyFileActions;
+			OCA.Files.fileActions = oldFileActions;
 		});
 		it('provides default file actions', function() {
 			_.each([fileListIn, fileListOut], function(fileList) {
@@ -294,6 +298,10 @@ describe('OCA.Sharing.App tests', function() {
 			appReloadStub = sinon.stub(OCA.Files.App.fileList, 'reload');
 			fileListInReloadStub = sinon.stub(fileListIn, 'reload');
 
+			// Remove any handlers registered outside the test lifecycle (e.g. via
+			// $(document).ready in app.js) before adding a fresh one, to ensure
+			// exactly one handler fires per event.
+			$('body').off('OCA.Notification.Action');
 			App.registerNotificationHandler();
 		});
 		afterEach(function() {

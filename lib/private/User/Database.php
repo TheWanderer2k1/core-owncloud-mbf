@@ -83,8 +83,8 @@ class Database extends Backend implements IUserBackend, IProvidesHomeBackend, IP
 	public function createUser($uid, $password) {
 		unset($this->cache[$uid]); // make sure we are reading from the db
 		if (!$this->userExists($uid)) {
-			$query = \OC_DB::prepare('INSERT INTO `*PREFIX*users` ( `uid`, `password` ) VALUES( ?, ? )');
-			$result = $query->execute([$uid, \OC::$server->getHasher()->hash($password)]);
+			$connection = \OC::$server->getDatabaseConnection();
+			$result = $connection->executeStatement('INSERT INTO `*PREFIX*users` ( `uid`, `password` ) VALUES( ?, ? )', [$uid, \OC::$server->getHasher()->hash($password)]);
 
 			if ($result) {
 				unset($this->cache[$uid]); // invalidate non existing user in cache
@@ -105,8 +105,8 @@ class Database extends Backend implements IUserBackend, IProvidesHomeBackend, IP
 	 */
 	public function deleteUser($uid) {
 		// Delete user-group-relation
-		$query = \OC_DB::prepare('DELETE FROM `*PREFIX*users` WHERE `uid` = ?');
-		$result = $query->execute([$uid]);
+		$connection = \OC::$server->getDatabaseConnection();
+		$result = $connection->executeStatement('DELETE FROM `*PREFIX*users` WHERE `uid` = ?', [$uid]);
 
 		if (isset($this->cache[$uid])) {
 			unset($this->cache[$uid]);
@@ -131,8 +131,8 @@ class Database extends Backend implements IUserBackend, IProvidesHomeBackend, IP
 		}
 
 		if ($this->userExists($uid)) {
-			$query = \OC_DB::prepare('UPDATE `*PREFIX*users` SET `password` = ? WHERE `uid` = ?');
-			$result = $query->execute([\OC::$server->getHasher()->hash($password), $uid]);
+			$connection = \OC::$server->getDatabaseConnection();
+			$result = $connection->executeStatement('UPDATE `*PREFIX*users` SET `password` = ? WHERE `uid` = ?', [\OC::$server->getHasher()->hash($password), $uid]);
 
 			return $result ? true : false;
 		}
@@ -150,8 +150,8 @@ class Database extends Backend implements IUserBackend, IProvidesHomeBackend, IP
 	 */
 	public function setDisplayName($uid, $displayName) {
 		if ($this->userExists($uid)) {
-			$query = \OC_DB::prepare('UPDATE `*PREFIX*users` SET `displayname` = ? WHERE LOWER(`uid`) = LOWER(?)');
-			$query->execute([$displayName, $uid]);
+			$connection = \OC::$server->getDatabaseConnection();
+			$connection->executeStatement('UPDATE `*PREFIX*users` SET `displayname` = ? WHERE LOWER(`uid`) = LOWER(?)', [$displayName, $uid]);
 			$this->cache[$uid]['displayname'] = $displayName;
 
 			return true;
@@ -167,7 +167,7 @@ class Database extends Backend implements IUserBackend, IProvidesHomeBackend, IP
 	 */
 	public function getDisplayName($uid) {
 		$this->loadUser($uid);
-		if (\strlen($this->cache[$uid]['displayname']) === 0) {
+		if (($this->cache[$uid]['displayname'] ?? '') === '') {
 			return $uid;
 		}
 
@@ -194,10 +194,11 @@ class Database extends Backend implements IUserBackend, IProvidesHomeBackend, IP
 		}
 
 		$displayNames = [];
-		$query = \OC_DB::prepare('SELECT `uid`, `displayname` FROM `*PREFIX*users`'
+		$connection = \OC::$server->getDatabaseConnection();
+		$query = $connection->prepare('SELECT `uid`, `displayname` FROM `*PREFIX*users`'
 			. $searchLike .' ORDER BY `uid` ASC', $limit, $offset);
-		$result = $query->execute($parameters);
-		while ($row = $result->fetchRow()) {
+		$result = $query->executeQuery($parameters);
+		while ($row = $result->fetchAssociative()) {
 			$displayNames[$row['uid']] = $row['displayname'];
 		}
 
@@ -214,10 +215,10 @@ class Database extends Backend implements IUserBackend, IProvidesHomeBackend, IP
 	 * returns the user id or false
 	 */
 	public function checkPassword($uid, $password) {
-		$query = \OC_DB::prepare('SELECT `uid`, `password` FROM `*PREFIX*users` WHERE LOWER(`uid`) = LOWER(?)');
-		$result = $query->execute([$uid]);
+		$connection = \OC::$server->getDatabaseConnection();
+		$result = $connection->executeQuery('SELECT `uid`, `password` FROM `*PREFIX*users` WHERE LOWER(`uid`) = LOWER(?)', [$uid]);
 
-		$row = $result->fetchRow();
+		$row = $result->fetchAssociative();
 		if ($row) {
 			$storedHash = $row['password'];
 			$newHash = '';
@@ -241,23 +242,23 @@ class Database extends Backend implements IUserBackend, IProvidesHomeBackend, IP
 	private function loadUser($uid) {
 		// if not in cache (false is a valid value)
 		if (!isset($this->cache[$uid]) && $this->cache[$uid] !== false) {
-			$query = \OC_DB::prepare('SELECT `uid`, `displayname` FROM `*PREFIX*users` WHERE LOWER(`uid`) = LOWER(?)');
-			$result = $query->execute([$uid]);
+			$connection = \OC::$server->getDatabaseConnection();
+			$result = $connection->executeQuery('SELECT `uid`, `displayname` FROM `*PREFIX*users` WHERE LOWER(`uid`) = LOWER(?)', [$uid]);
 
 			if ($result === false) {
-				Util::writeLog('core', \OC_DB::getErrorMessage(), Util::ERROR);
+				Util::writeLog('core', $connection->getError(), Util::ERROR);
 				return false;
 			}
 
 			// "uid" is primary key, so there can only be a single result
-			if ($row = $result->fetchRow()) {
+			if ($row = $result->fetchAssociative()) {
 				$this->cache[$uid]['uid'] = $row['uid'];
 				$this->cache[$uid]['displayname'] = $row['displayname'];
 			} else {
 				$this->cache[$uid] = false;
 				return false;
 			}
-			$result->closeCursor();
+			$result->free();
 		}
 
 		return true;
@@ -280,12 +281,15 @@ class Database extends Backend implements IUserBackend, IProvidesHomeBackend, IP
 			$searchLike = ' WHERE LOWER(`uid`) LIKE LOWER(?)';
 		}
 
-		$query = \OC_DB::prepare('SELECT `uid` FROM `*PREFIX*users`' . $searchLike . ' ORDER BY `uid` ASC', $limit, $offset);
-		$result = $query->execute($parameters);
+		$connection = \OC::$server->getDatabaseConnection();
+		$query = $connection->prepare('SELECT `uid` FROM `*PREFIX*users`' . $searchLike . ' ORDER BY `uid` ASC', $limit, $offset);
+		$result = $query->executeQuery($parameters);
 		$users = [];
-		while ($row = $result->fetchRow()) {
+		while ($row = $result->fetchAssociative()) {
 			$users[] = $row['uid'];
 		}
+		$result->free();
+
 		return $users;
 	}
 
@@ -321,10 +325,11 @@ class Database extends Backend implements IUserBackend, IProvidesHomeBackend, IP
 	 * @return int|bool
 	 */
 	public function countUsers() {
-		$query = \OC_DB::prepare('SELECT COUNT(*) FROM `*PREFIX*users`');
-		$result = $query->execute();
-		if ($result === false) {
-			Util::writeLog('core', \OC_DB::getErrorMessage(), Util::ERROR);
+		$connection = \OC::$server->getDatabaseConnection();
+		try {
+			$result = $connection->executeQuery('SELECT COUNT(*) FROM `*PREFIX*users`');
+		} catch (\Doctrine\DBAL\Exception $e) {
+			Util::writeLog('core', $connection->getError(), Util::ERROR);
 			return false;
 		}
 		return $result->fetchOne();

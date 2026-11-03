@@ -8,11 +8,14 @@
  */
 namespace Test\Repair;
 
+use OC;
 use OC\Files\Storage\Temporary;
+use OC\Repair\RepairMimeTypes;
 use OCP\Files\IMimeTypeLoader;
 use OCP\IConfig;
 use OCP\Migration\IOutput;
 use OCP\Migration\IRepairStep;
+use PHPUnit\Framework\MockObject\MockObject;
 use Test\TestCase;
 
 /**
@@ -35,10 +38,10 @@ class RepairMimeTypesTest extends TestCase {
 	protected function setUp(): void {
 		parent::setUp();
 
-		$this->mimetypeLoader = \OC::$server->getMimeTypeLoader();
+		$this->mimetypeLoader = OC::$server->getMimeTypeLoader();
 
-		/** @var IConfig | \PHPUnit\Framework\MockObject\MockObject $config */
-		$config = $this->getMockBuilder('OCP\IConfig')
+		/** @var IConfig | MockObject $config */
+		$config = $this->getMockBuilder(IConfig::class)
 			->disableOriginalConstructor()
 			->getMock();
 		$config->expects($this->any())
@@ -46,15 +49,15 @@ class RepairMimeTypesTest extends TestCase {
 			->with('version')
 			->willReturn('8.0.0.0');
 
-		$this->storage = new \OC\Files\Storage\Temporary([]);
+		$this->storage = new Temporary([]);
 
-		$this->repair = new \OC\Repair\RepairMimeTypes($config);
+		$this->repair = new RepairMimeTypes($config, $this->mimetypeLoader);
 	}
 
 	protected function tearDown(): void {
 		$this->storage->getCache()->clear();
 		$sql = 'DELETE FROM `*PREFIX*storages` WHERE `id` = ?';
-		\OC_DB::executeAudited($sql, [$this->storage->getId()]);
+		\OC::$server->getDatabaseConnection()->executeStatement($sql, [$this->storage->getId()]);
 		$this->clearMimeTypes();
 
 		parent::tearDown();
@@ -62,7 +65,7 @@ class RepairMimeTypesTest extends TestCase {
 
 	private function clearMimeTypes() {
 		$sql = 'DELETE FROM `*PREFIX*mimetypes`';
-		\OC_DB::executeAudited($sql);
+		\OC::$server->getDatabaseConnection()->executeStatement($sql);
 		$this->mimetypeLoader->reset();
 	}
 
@@ -94,8 +97,10 @@ class RepairMimeTypesTest extends TestCase {
 	 */
 	private function getMimeTypeIdFromDB($mimeType) {
 		$sql = 'SELECT `id` FROM `*PREFIX*mimetypes` WHERE `mimetype` = ?';
-		$results = \OC_DB::executeAudited($sql, [$mimeType]);
-		$result = $results->fetchOne();
+		$connection = \OC::$server->getDatabaseConnection();
+		$results = $connection->executeQuery($sql, [$mimeType]);
+		$result = $results->fetchAssociative();
+		$results->free();
 		if ($result) {
 			return $result['id'];
 		}
@@ -105,7 +110,7 @@ class RepairMimeTypesTest extends TestCase {
 	private function renameMimeTypes($currentMimeTypes, $fixedMimeTypes) {
 		$this->addEntries($currentMimeTypes);
 
-		/** @var IOutput | \PHPUnit\Framework\MockObject\MockObject $outputMock */
+		/** @var IOutput | MockObject $outputMock */
 		$outputMock = $this->getMockBuilder('\OCP\Migration\IOutput')
 			->disableOriginalConstructor()
 			->getMock();
@@ -454,6 +459,45 @@ class RepairMimeTypesTest extends TestCase {
 		$this->assertNull($this->getMimeTypeIdFromDB('application/x-font-ttf'));
 		$this->assertNull($this->getMimeTypeIdFromDB('font'));
 		$this->assertNull($this->getMimeTypeIdFromDB('font/opentype'));
+	}
+
+	/**
+	 * The repair step deletes rows from the mimetypes table, so it has to drop
+	 * the id <-> mimetype mapping the loader caches - otherwise the mapping of
+	 * a deleted mimetype survives the repair.
+	 */
+	public function testMimeTypeCacheIsResetAfterRepair() {
+		/** @var IMimeTypeLoader | MockObject $loader */
+		$loader = $this->createMock(IMimeTypeLoader::class);
+		$loader->expects($this->once())->method('reset');
+
+		/** @var IConfig | MockObject $config */
+		$config = $this->createMock(IConfig::class);
+		$config->method('getSystemValue')->with('version')->willReturn('8.0.0.0');
+
+		/** @var IOutput | MockObject $outputMock */
+		$outputMock = $this->createMock(IOutput::class);
+
+		(new RepairMimeTypes($config, $loader))->run($outputMock);
+	}
+
+	/**
+	 * Nothing was changed, so there is no reason to throw the mimetype cache of
+	 * every node away.
+	 */
+	public function testMimeTypeCacheIsKeptWhenNothingIsRepaired() {
+		/** @var IMimeTypeLoader | MockObject $loader */
+		$loader = $this->createMock(IMimeTypeLoader::class);
+		$loader->expects($this->never())->method('reset');
+
+		/** @var IConfig | MockObject $config */
+		$config = $this->createMock(IConfig::class);
+		$config->method('getSystemValue')->with('version')->willReturn('10.0.0.0');
+
+		/** @var IOutput | MockObject $outputMock */
+		$outputMock = $this->createMock(IOutput::class);
+
+		(new RepairMimeTypes($config, $loader))->run($outputMock);
 	}
 
 	/**

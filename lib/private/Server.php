@@ -44,6 +44,8 @@ use bantu\IniGetWrapper\IniGetWrapper;
 use OC\AppFramework\Http\Request;
 use OC\AppFramework\Db\Db;
 use OC\AppFramework\Utility\TimeFactory;
+use OC\Authentication\AccountLockout\AccountLockout;
+use OC\Authentication\AccountLockout\LockoutMapper;
 use OC\Authentication\AccountModule\Manager as AccountModuleManager;
 use OC\Authentication\LoginPolicies\LoginPolicyManager;
 use OC\Authentication\LoginPolicies\GroupLoginPolicy;
@@ -114,6 +116,7 @@ use OCP\Util\UserSearch;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use OC\Files\External\StoragesBackendService;
+use OC\Files\External\StoragesBackendChecker;
 use OC\Files\External\Service\UserStoragesService;
 use OC\Files\External\Service\UserGlobalStoragesService;
 use OC\Files\External\Service\GlobalStoragesService;
@@ -320,6 +323,18 @@ class Server extends ServerContainer implements IServerContainer, IServiceLoader
 			return new TimeFactory();
 		});
 		$this->registerAlias('OCP\AppFramework\Utility\ITimeFactory', 'TimeFactory');
+		$this->registerService(LockoutMapper::class, function (Server $c) {
+			return new LockoutMapper($c->getDatabaseConnection());
+		});
+		$this->registerService(AccountLockout::class, function (Server $c) {
+			return new AccountLockout(
+				$c->query(LockoutMapper::class),
+				$c->getConfig(),
+				$c->getUserManager(),
+				new TimeFactory(),
+				$c->getLogger()
+			);
+		});
 		$this->registerService('UserSession', function (Server $c) {
 			$manager = $c->getUserManager();
 			$session = new Memory();
@@ -346,7 +361,8 @@ class Server extends ServerContainer implements IServerContainer, IServiceLoader
 				$c->getLogger(),
 				$this,
 				$userSyncService,
-				$c->getEventDispatcher()
+				$c->getEventDispatcher(),
+				$c->query(AccountLockout::class)
 			);
 			$userSession->listen('\OC\User', 'preCreateUser', function ($uid, $password) {
 				\OC_Hook::emit('OC_User', 'pre_createUser', ['run' => true, 'uid' => $uid, 'password' => $password]);
@@ -362,6 +378,8 @@ class Server extends ServerContainer implements IServerContainer, IServiceLoader
 			$userSession->listen('\OC\User', 'postDelete', function ($user) {
 				/** @var $user \OC\User\User */
 				\OC_Hook::emit('OC_User', 'post_deleteUser', ['uid' => $user->getUID()]);
+				// a recreated account must not inherit the failed attempts of its namesake
+				$this->query(AccountLockout::class)->clearFailures($user->getUID());
 				$this->emittingCall(function () {
 					return true;
 				}, ['before' => [], 'after' => ['uid' => $user->getUID()]], 'user', 'delete');
@@ -523,14 +541,7 @@ class Server extends ServerContainer implements IServerContainer, IServiceLoader
 			);
 		});
 		$this->registerService('Router', function (Server $c) {
-			$cacheFactory = $c->getMemCacheFactory();
-			$logger = $c->getLogger();
-			if ($cacheFactory->isAvailable()) {
-				$router = new \OC\Route\CachingRouter($cacheFactory->create('route'), $logger);
-			} else {
-				$router = new \OC\Route\Router($logger);
-			}
-			return $router;
+			return new \OC\Route\Router($c->getLogger());
 		});
 		$this->registerService('Search', function ($c) {
 			return new Search();
@@ -687,14 +698,22 @@ class Server extends ServerContainer implements IServerContainer, IServiceLoader
 			return new TrustedDomainHelper($this->getConfig());
 		});
 		$this->registerService('IntegrityCodeChecker', function (Server $c) {
-			// IConfig and IAppManager requires a working database. This code
-			// might however be called when ownCloud is not yet setup.
+			// IConfig, IAppManager and the HTTP client service all require a
+			// working database (the HTTP client resolves a Files\View which
+			// pulls in the user manager and thus the DB connection). This code
+			// might however be called when ownCloud is not yet setup (e.g. occ
+			// maintenance:install registers commands before the DB exists), so
+			// only resolve those dependencies once the instance is installed.
+			// The Checker only touches the client lazily when it actually
+			// verifies a signature, which never happens before install.
 			if (\OC::$server->getSystemConfig()->getValue('installed', false)) {
 				$config = $c->getConfig();
 				$appManager = $c->getAppManager();
+				$clientService = $c->getHTTPClientService();
 			} else {
 				$config = null;
 				$appManager = null;
+				$clientService = null;
 			}
 
 			return new Checker(
@@ -704,7 +723,10 @@ class Server extends ServerContainer implements IServerContainer, IServiceLoader
 				$config,
 				$c->getMemCacheFactory(),
 				$appManager,
-				$c->getTempManager()
+				$c->getTempManager(),
+				null,
+				$clientService,
+				$c->getLogger()
 			);
 		});
 		$this->registerService('Request', function ($c) {
@@ -730,9 +752,7 @@ class Server extends ServerContainer implements IServerContainer, IServiceLoader
 					'server' => $_SERVER,
 					'env' => $_ENV,
 					'cookies' => $_COOKIE,
-					'method' => (isset($_SERVER, $_SERVER['REQUEST_METHOD']))
-						? $_SERVER['REQUEST_METHOD']
-						: null,
+					'method' => $_SERVER['REQUEST_METHOD'] ?? 'GET',
 					'urlParams' => $urlParams,
 				],
 				$this->getSecureRandom(),
@@ -846,7 +866,7 @@ class Server extends ServerContainer implements IServerContainer, IServiceLoader
 			);
 		});
 		$this->registerService('StoragesBackendService', function (Server $c) {
-			$service = new StoragesBackendService($c->query('AllConfig'));
+			$service = new StoragesBackendService($c->query(StoragesBackendChecker::class));
 
 			// register auth mechanisms provided by core
 			$provider = new \OC\Files\External\Auth\CoreAuthMechanismProvider($c, [

@@ -2144,6 +2144,11 @@ class UsersControllerTest extends TestCase {
 		$iL10->expects($this->atLeastOnce())
 			->method('t')
 			->willReturn('An email has been sent to this address for confirmation. Until the email is verified this address will not be set.');
+		$iConfig
+			->method('getUserValue')
+			->with($id, 'owncloud', 'changeMail')
+			->willReturn('12000:AVerySecretToken');
+
 		$expectedResponse = new DataResponse(
 			[
 				'status' => 'success',
@@ -2178,28 +2183,31 @@ class UsersControllerTest extends TestCase {
 	 * @param string $mailAddress
 	 * @param bool $isValid
 	 * @param bool $expectsUpdate
-	 * @param bool $chanChangeMailAddress
+	 * @param bool $canChangeMailAddress
 	 * @param bool $responseCode
 	 */
-	public function testSetEmailAddress($mailAddress, $isValid, $expectsUpdate, $chanChangeMailAddress, $responseCode): void {
+	public function testSetEmailAddress($mailAddress, $isValid, $expectsUpdate, $canChangeMailAddress, $responseCode): void {
 		$this->container['IsAdmin'] = true;
 
-		$user = $this->getMockBuilder(User::class)
-			->disableOriginalConstructor()->getMock();
-		$user
-			->method('getUID')
-			->willReturn('foo');
-		$user
-			->method('getEMailAddress')
-			->willReturn('foo@local');
-		$user
-			->method('canChangeMailAddress')
-			->willReturn($chanChangeMailAddress);
-		$user
-			->method('setEMailAddress')
-			->with(
-				$this->equalTo($mailAddress)
-			);
+		$user = $this->createMock(User::class);
+		$user->method('getUID')->willReturn('foo');
+		$user->method('getEMailAddress')->willReturn('foo@local');
+		$user->method('canChangeMailAddress')->willReturn($canChangeMailAddress);
+		$user->expects($this->never())->method('setEmailAddress');
+
+		$user2 = $this->createMock(User::class);
+		$user2->method('getUID')->willReturn('anotherUserId');
+		$user2->method('getEMailAddress')->willReturn('another@local');
+		$user2->method('canChangeMailAddress')->willReturn($canChangeMailAddress);
+
+		if ($isValid && $canChangeMailAddress) {
+			$user2
+				->expects($this->once())
+				->method('setEMailAddress')
+				->with(
+					$this->equalTo($mailAddress)
+				);
+		}
 
 		$this->container['UserSession']
 			->expects($this->atLeastOnce())
@@ -2210,24 +2218,28 @@ class UsersControllerTest extends TestCase {
 			->with($mailAddress)
 			->willReturn($isValid);
 
-		if ($isValid) {
-			$user->expects($this->atLeastOnce())
-				->method('canChangeMailAddress')
-				->willReturn(true);
-		}
-
 		$this->container['Config']
 			->method('getUserValue')
-			->with('foo', 'owncloud', 'changeMail')
-			->willReturn('12000:AVerySecretToken');
+			->willReturnMap([
+				['foo', 'owncloud', 'changeMail', '12000:AVerySecretToken'],
+				['anotherUserId', 'owncloud', 'changeMail', '120:ASecretToken'],
+			]);
 		$this->container['TimeFactory']
 			->method('getTime')
 			->willReturnOnConsecutiveCalls(12301, 12348);
 		$this->container['UserManager']
 			->expects($this->atLeastOnce())
 			->method('get')
-			->with('foo')
-			->willReturn($user);
+			->willReturnCallback(function ($id) use ($user, $user2) {
+				switch($id) {
+					case "foo":
+						return $user;
+					case "anotherUserId":
+						return $user2;
+					default:
+						return null;
+				}
+			});
 		$this->container['SecureRandom']
 			->method('generate')
 			->with('21')
@@ -2260,8 +2272,83 @@ class UsersControllerTest extends TestCase {
 			->method('send')
 			->with($message);
 
-		$response = $this->container['UsersController']->setMailAddress($user->getUID(), $mailAddress);
+		$response = $this->container['UsersController']->setMailAddress("anotherUserId", $mailAddress);
 		$this->assertSame($responseCode, $response->getStatus());
+	}
+
+	/**
+	 * When a subadmin calls setMailAddress for a different user, the verification
+	 * email and token must be stored under the target user's ID, not the caller's.
+	 * Regression test for GHSA-5945-5fp8-4283 (subadmin path).
+	 */
+	public function testSetMailAddressSubadminSendsEmailToTargetNotCaller(): void {
+		$this->container['IsAdmin'] = false;
+
+		$callerUser = $this->createMock(User::class);
+		$callerUser->method('getUID')->willReturn('subadmin');
+
+		$targetUser = $this->createMock(User::class);
+		$targetUser->method('getUID')->willReturn('targetuser');
+		$targetUser->method('canChangeMailAddress')->willReturn(true);
+
+		$subAdmin = $this->createMock(SubAdmin::class);
+		$subAdmin->method('isUserAccessible')->willReturn(true);
+
+		$this->container['GroupManager']
+			->method('getSubAdmin')
+			->willReturn($subAdmin);
+
+		$this->container['UserSession']
+			->method('getUser')
+			->willReturn($callerUser);
+
+		$this->container['UserManager']
+			->method('get')
+			->willReturnCallback(function ($id) use ($callerUser, $targetUser) {
+				$userMap = ['subadmin' => $callerUser, 'targetuser' => $targetUser];
+				return $userMap[$id] ?? null;
+			});
+
+		$this->container['Mailer']
+			->method('validateMailAddress')
+			->willReturn(true);
+
+		// Token must be read from and stored under 'targetuser', not 'subadmin'
+		$this->container['Config']
+			->method('getUserValue')
+			->with('targetuser', 'owncloud', 'changeMail')
+			->willReturn('');
+
+		$this->container['Config']
+			->expects($this->once())
+			->method('setUserValue')
+			->with('targetuser', 'owncloud', 'changeMail', $this->anything());
+
+		$this->container['TimeFactory']
+			->method('getTime')
+			->willReturn(12345);
+
+		$this->container['SecureRandom']
+			->method('generate')
+			->willReturn('SomeToken');
+
+		// Confirmation link must carry 'targetuser', not 'subadmin'
+		$this->container['URLGenerator']
+			->expects($this->once())
+			->method('linkToRouteAbsolute')
+			->with('settings.Users.changeMail', $this->callback(function ($params) {
+				return isset($params['userId']) && $params['userId'] === 'targetuser';
+			}))
+			->willReturn('https://example.com/changeMail');
+
+		$message = $this->createMock(Message::class);
+		$this->container['Mailer']
+			->method('createMessage')
+			->willReturn($message);
+
+		$response = $this->container['UsersController']->setMailAddress('targetuser', 'new@example.com');
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+		$this->assertSame('success', $response->getData()['status']);
 	}
 
 	public function testStatsAdmin(): void {
@@ -3530,6 +3617,10 @@ class UsersControllerTest extends TestCase {
 			->method('send')
 			->with($message)
 			->willReturn([]);
+		$l10n->method('t')
+			->willReturnCallback(function ($text, $parameters = []) {
+				return \vsprintf($text, $parameters);
+			});
 
 		$result = $usersController->setPassword('fooBaZ1', 'foo', '123');
 		$this->assertEquals(new Http\JSONResponse(['status' => 'success']), $result);
