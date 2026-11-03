@@ -35,14 +35,10 @@ class Panel implements ISettings {
 
             $user = $this->userSession->getUser();
             $uid = $user ? $user->getUID() : '';
-            //$query = $this->db->prepare('SELECT * FROM `*PREFIX*packagemanager_subscription_status` WHERE `user_id` = :uid');
-            $query = $this->db->prepare($sql);
-            $success = $query->execute(['uid' =>$uid]);
-            if ($success) {
-                $res = $query->fetchAll();
-                if (count($res) > 1) {
-                    throw new \Exception('Unexpected state: Found multiple subscription records for user.');
-                }
+            $res = $this->db->executeQuery($sql, ['uid' => $uid]);
+            $res = $res->fetchAllAssociative();
+            if (count($res) > 1) {
+                throw new \Exception('Unexpected state: Found multiple subscription records for user.');
             }
         }
 

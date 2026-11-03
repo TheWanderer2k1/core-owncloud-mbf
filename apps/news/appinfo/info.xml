@@ -9,7 +9,7 @@
   <version>0.1.0</version>
   <namespace>News</namespace>
   <dependencies>
-    <owncloud min-version="10.0" max-version="10.99" />
+    <owncloud min-version="10.0" max-version="11" />
   </dependencies>
 
   <settings>

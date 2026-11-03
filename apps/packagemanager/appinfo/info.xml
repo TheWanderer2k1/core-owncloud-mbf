@@ -11,7 +11,7 @@
 	<category>packagemanager</category>
 
 	<dependencies>
-		<owncloud min-version="10" max-version="10.99" />
+		<owncloud min-version="10" max-version="11" />
 	</dependencies>
 
 	<use-migrations>true</use-migrations>
