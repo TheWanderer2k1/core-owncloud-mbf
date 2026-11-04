@@ -890,9 +890,8 @@ class PackageRegistrationController extends Controller {
             $query->bindParam(1, $likeUserId, \PDO::PARAM_STR);
             $query->bindParam(2, $likePath, \PDO::PARAM_STR);
             $query->bindParam(3, $mimetype, \PDO::PARAM_STR);
-            $query->execute();
-            $row = $query->fetch();
-            $query->closeCursor();
+            $result = $query->executeQuery();
+            $row = $result->fetchAssociative();
             if ($row) {
                 return (float)reset($row);
             }

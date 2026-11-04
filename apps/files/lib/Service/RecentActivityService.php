@@ -70,8 +70,7 @@ class RecentActivityService {
 			->andWhere($qb->expr()->eq('fc.path', $qb->createNamedParameter($path)))
 			->setMaxResults(1);
 		$result = $qb->execute();
-		$row = $result->fetch();
-		$result->closeCursor();
+		$row = $result->fetchAssociative();
 		return $row ? (int)$row['fileid'] : 0;
 	}
 }

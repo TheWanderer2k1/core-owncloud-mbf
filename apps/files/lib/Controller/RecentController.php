@@ -63,8 +63,7 @@ class RecentController extends Controller {
 			->setMaxResults($limit);
 
 		$result = $qb->execute();
-		$recentRows = $result->fetchAll();
-		$result->closeCursor();
+		$recentRows = $result->fetchAllAssociative();
 
 		if (empty($recentRows)) {
 			return new DataResponse(['files' => []]);
@@ -88,10 +87,9 @@ class RecentController extends Controller {
 
 		$result3 = $qb3->execute();
 		$fileRows = [];
-		foreach ($result3->fetchAll() as $row) {
+		foreach ($result3->fetchAllAssociative() as $row) {
 			$fileRows[(int)$row['fileid']] = $row;
 		}
-		$result3->closeCursor();
 
 		// Also check if any of these files are shared TO this user (for path display)
 		$qbShare = $this->db->getQueryBuilder();
@@ -106,10 +104,9 @@ class RecentController extends Controller {
 			));
 		$rShare = $qbShare->execute();
 		$shareTargets = [];
-		foreach ($rShare->fetchAll() as $sRow) {
+		foreach ($rShare->fetchAllAssociative() as $sRow) {
 			$shareTargets[(int)$sRow['file_source']] = $sRow['file_target'];
 		}
-		$rShare->closeCursor();
 
 		// Build result in order of last_activity DESC
 		$files = [];
@@ -204,8 +201,7 @@ class RecentController extends Controller {
 			->from('mimetypes')
 			->where($qb->expr()->eq('mimetype', $qb->createNamedParameter($mimetype)));
 		$result = $qb->execute();
-		$row = $result->fetch();
-		$result->closeCursor();
+		$row = $result->fetchAssociative();
 		return $row ? (int)$row['id'] : 0;
 	}
 
@@ -221,8 +217,7 @@ class RecentController extends Controller {
 			->from('mimetypes')
 			->where($qb->expr()->eq('id', $qb->createNamedParameter($id)));
 		$result = $qb->execute();
-		$row = $result->fetch();
-		$result->closeCursor();
+		$row = $result->fetchAssociative();
 		$mime = $row ? $row['mimetype'] : 'application/octet-stream';
 		$this->mimetypeCache[$id] = $mime;
 		return $mime;
