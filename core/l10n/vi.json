@@ -181,12 +181,7 @@
     "Password required" : "Yêu cầu mật khẩu",
     "Link name" : "Tên liên kết",
     "Name" : "Tên",
-<<<<<<< HEAD
-    "Filename" : "Tên tệp",
-||||||| 4d569f2655
-=======
     "Filename" : "Tên tệp tin",
->>>>>>> tags/v11.1.0
     "Password" : "Mật khẩu",
     "Download / View / Upload / Edit" : "Tải về / Xem / Tải lên / Chỉnh sửa",
     "Recipients can view, download and edit contents." : "Người nhận có thể xem, tải về và chỉnh sửa nội dung.",

@@ -83,8 +83,8 @@ class ConfigController extends Controller {
 
         // Parse the <ol> and <li> HTML to an array whose elements that are
         // strutured to match landing page expectation
-        $terms = $this->htmllistToArray($terms);
-        $policy = $this->htmllistToArray($policy);
+        $terms = $this->htmlToArray($terms);
+        $policy = $this->htmlToArray($policy);
 
         // Conflict in naming: what is 'policy' on owncloud is 'privacy' in the
         // landing page. Moveover, to the landing page, the term 'policy'
@@ -103,29 +103,93 @@ class ConfigController extends Controller {
         return $html;
     }
 
+    private function removeEmptyElements(\DOMDocument $dom): void {
+        $xpath = new \DOMXPath($dom);
+        
+        // Target common block & inline tags that might be empty
+        $elements = $xpath->query('//p | //div | //span | //li');
 
-    private function htmllistToArray(string $html): array {
-        $dom = new \DOMDocument();
-        @$dom->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'), LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
-        $items = [];
-        $liElements = $dom->getElementsByTagName('li');
-
-        foreach ($liElements as $li) {
-            $text = trim($li->nodeValue);
-
-            $parts = explode(':', $text, 2);
+        // Iterate backwards so removing a child doesn't break traversal
+        for ($i = $elements->length - 1; $i >= 0; $i--) {
+            $node = $elements->item($i);
             
-            if (count($parts) === 2) {
-                $items[] = [
-                    'title' => trim($parts[0]),
-                    'content' => trim($parts[1])
-                ];
-            } else {
-                $items[] = [
-                    'title' => '',
-                    'content' => trim($text)
-                ];
+            // Check if the node contains images, iframes, etc. that shouldn't be deleted
+            if ($xpath->query('.//img | .//iframe | .//video', $node)->length > 0) {
+                continue;
             }
+
+            // Normalize text content by stripping standard spaces and non-breaking spaces (\u{00A0})
+            $cleanText = str_replace(["\xc2\xa0", '&nbsp;'], '', $node->textContent);
+            $cleanText = trim($cleanText);
+
+            if ($cleanText === '') {
+                $node->parentNode->removeChild($node);
+            }
+        }
+    }
+
+    private function htmlToArray(string $html, bool $preserveHtmlContent = true): array {
+        $html = trim($html);
+        if ($html === '') {
+            return [];
+        }
+
+        $dom = new \DOMDocument();
+        $internalErrors = libxml_use_internal_errors(true);
+
+        // Wrap the snippet in a root <div> so we have a single container of siblings
+        $dom->loadHTML(
+            '<?xml encoding="utf-8" ?><div>' . $html . '</div>',
+            LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
+        );
+
+        $this->removeEmptyElements($dom);
+
+        libxml_clear_errors();
+        libxml_use_internal_errors($internalErrors);
+
+        $root = $dom->getElementsByTagName('div')->item(0);
+        if (!$root) {
+            return [];
+        }
+
+        $items = [];
+        $currentItem = null;
+
+        // Iterate through each child element/node in order
+        foreach ($root->childNodes as $node) {
+            // Check if the node is an <h1> tag
+            if ($node->nodeType === XML_ELEMENT_NODE && strtolower($node->nodeName) === 'h2') {
+                // If we were already collecting an item, save it before starting the next
+                if ($currentItem !== null) {
+                    $currentItem['content'] = trim($currentItem['content']);
+                    $items[] = $currentItem;
+                }
+
+                // Start a brand-new section
+                $currentItem = [
+                    'title' => trim($node->textContent),
+                    'content' => ''
+                ];
+            } elseif ($currentItem !== null) {
+                // Append everything between <h1> tags to the current section
+                if ($preserveHtmlContent) {
+                    // Preserves formatting (<p>, <ul>, <b>, line breaks, etc.)
+                    $currentItem['content'] .= $dom->saveHTML($node);
+                } else {
+                    // Plain text only
+                    $text = trim($node->textContent);
+                    if ($text !== '') {
+                        $currentItem['content'] .= ($currentItem['content'] !== '' ? ' ' : '') . $text;
+                    }
+                }
+            }
+        }
+
+        // Push the final section after reaching the end of the HTML
+        if ($currentItem !== null) {
+            $currentItem['content'] = trim($currentItem['content']);
+            $items[] = $currentItem;
         }
 
         return $items;
