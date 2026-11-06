@@ -81,8 +81,8 @@ class ConfigController extends Controller {
         $terms = $this->makeUrlsAbsolute($terms, $baseUrl);
         $policy = $this->makeUrlsAbsolute($policy, $baseUrl);
 
-        // Parse the <ol> and <li> HTML to an array whose elements that are
-        // strutured to match landing page expectation
+        // Parse HTML to an array whose elements are strutured to match landing
+        // page's expectation
         $terms = $this->htmlToArray($terms);
         $policy = $this->htmlToArray($policy);
 
