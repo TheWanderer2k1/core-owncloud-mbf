@@ -39,4 +39,5 @@
 		<route>files.view.index</route>
 		<order>0</order>
 	</navigation>
+    <use-migrations>true</use-migrations>
 </info>

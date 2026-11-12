@@ -377,14 +377,14 @@ class Database extends \OC\Group\Backend {
 		$this->fixDI();
 		$default = $this->config->getSystemValue('default_group_quota', '50 GB');
 		$qb = $this->dbConn->getQueryBuilder();
-		$cursor = $qb->select('quota')
+		$qb->select('quota')
 			->from('groups')
-			->where($qb->expr()->eq('gid', $qb->createNamedParameter($gid)))
-			->execute();
-		$result = $cursor->fetch();
-		$cursor->closeCursor();
+			->where($qb->expr()->eq('gid', $qb->createNamedParameter($gid)));
 
-		if (isset($result) && isset($result['quota'])) {
+        $cursor = $qb->execute();
+        $result = $cursor->fetchAssociative();
+
+		if (!empty($result['quota'])) {
 			return $result['quota'];
 		}
 		return $default;

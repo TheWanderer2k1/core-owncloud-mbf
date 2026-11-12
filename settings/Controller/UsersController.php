@@ -239,8 +239,8 @@ class UsersController extends Controller {
 					WHERE s.id = ? AND f.path = 'files'";
 
 			$stmt = $connection->prepare($sql);
-			$stmt->execute([$storageId]);
-			$row = $stmt->fetch();
+			$result = $stmt->executeQuery([$storageId]);
+			$row = $result->fetchAssociative();
 
 			$used = isset($row['size']) ? (int)$row['size'] : 0;
 		} catch (\Exception $e) {

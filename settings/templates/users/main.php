@@ -145,8 +145,8 @@ translation('settings');
                                 <?php
                                 $connection = \OC::$server->getDatabaseConnection();
                                 $stmt = $connection->prepare('SELECT gid FROM `*PREFIX*groups`');
-                                $stmt->execute();
-                                $groups = $stmt->fetchAll();
+                                $result = $stmt->executeQuery();
+                                $groups = $result->fetchAllAssociative();
                                 foreach ($groups as $group):
                                 ?>
                                         <option value="<?php p($group['gid']); ?>"><?php p($group['gid']); ?></option>

@@ -161,11 +161,13 @@ class MetaData {
 	private function generateGroupMetaData(\OCP\IGroup $group, $userSearch) {
 				$gid = $group->getGID();
 
-				$connection = \OC::$server->getDatabaseConnection();
-				$row = $connection->executeQuery(
-					'SELECT `quota` FROM `*PREFIX*groups` WHERE `gid` = ?',
-					[$gid]
-				)->fetch();
+                $qb = \OC::$server->getDatabaseConnection()->getQueryBuilder();
+                $row = $qb->select('quota')
+                    ->from('groups')
+                    ->where($qb->expr()->eq('gid', $qb->createNamedParameter($gid)))
+                    ->execute()
+                    ->fetchAssociative();
+
 				$groupQuota = $row ? $row['quota'] : '';
 
 				
