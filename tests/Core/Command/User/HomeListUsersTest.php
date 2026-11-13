@@ -21,7 +21,7 @@
 
 namespace Tests\Core\Command\User;
 
-use Doctrine\DBAL\ForwardCompatibility\DriverStatement;
+use Doctrine\DBAL\Result;
 use OC\Core\Command\User\HomeListUsers;
 use OC\DB\Connection;
 use OCP\IDBConnection;
@@ -82,8 +82,8 @@ class HomeListUsersTest extends TestCase {
 		$homePath = '/path/to/homes';
 		$uid = 'user1';
 
-		$resultMock = $this->createMock(DriverStatement::class);
-		$resultMock->method('fetch')->willReturnOnConsecutiveCalls(['user_id' => $uid], false);
+		$resultMock = $this->createMock(Result::class);
+		$resultMock->method('fetchAssociative')->willReturnOnConsecutiveCalls(['user_id' => $uid], false);
 		$queryMock = $this->getMockBuilder('\OC\DB\QueryBuilder\QueryBuilder')
 			->setConstructorArgs([$this->connection])
 			->setMethods(['execute'])
@@ -114,7 +114,10 @@ class HomeListUsersTest extends TestCase {
 			->getMock();
 		$userObject->method('getHome')->willReturn($path . '/' . $uid);
 		$userObject->method('getUID')->willReturn($uid);
-		$this->userManager->method('search')->willReturn([$uid => $userObject]);
+		$this->userManager->expects($this->once())
+			->method('search')
+			->with($this->identicalTo(''), null, null, true)
+			->willReturn([$uid => $userObject]);
 
 		$this->commandTester->execute(['--all' => true]);
 		$output = $this->commandTester->getDisplay();

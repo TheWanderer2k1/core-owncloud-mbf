@@ -21,8 +21,10 @@
 
 namespace Tests\Core\Controller;
 
-use Doctrine\DBAL\Driver\Statement;
+use Doctrine\DBAL\Result;
+use Doctrine\DBAL\Statement;
 use OC\AppFramework\Http\Request;
+use OC\Authentication\AccountLockout\AccountLockout;
 use OC\Core\Controller\OcsController;
 use OCP\IDBConnection;
 use OCP\IRequest;
@@ -50,6 +52,9 @@ class OcsControllerTest extends TestCase {
 	/** @var IUserManager | MockObject */
 	private $userManager;
 
+	/** @var AccountLockout | MockObject */
+	private $accountLockout;
+
 	/** @var  OcsController | MockObject */
 	private $controller;
 
@@ -59,12 +64,14 @@ class OcsControllerTest extends TestCase {
 		$this->dbConn = $this->createMock(IDBConnection::class);
 		$this->userSession = $this->createMock(IUserSession::class);
 		$this->userManager = $this->createMock(IUserManager::class);
+		$this->accountLockout = $this->createMock(AccountLockout::class);
 		$this->controller = new OcsController(
 			'core',
 			$this->request,
 			$this->dbConn,
 			$this->userSession,
-			$this->userManager
+			$this->userManager,
+			$this->accountLockout
 		);
 	}
 
@@ -103,6 +110,48 @@ class OcsControllerTest extends TestCase {
 		$this->assertEquals($expectedCode, $result->getStatusCode());
 	}
 
+	public function testCheckPersonWrongPasswordIsCounted() {
+		$this->userManager->expects($this->once())
+			->method('checkPassword')
+			->willReturn(false);
+		$this->accountLockout->expects($this->once())
+			->method('recordFailure')
+			->with('user');
+
+		$result = $this->controller->checkPerson('user', 'password');
+		$this->assertEquals(102, $result->getStatusCode());
+	}
+
+	public function testCheckPersonLockedOutIsRefusedBeforeTheCredentialCheck() {
+		$this->accountLockout->expects($this->once())
+			->method('getRemainingLockTime')
+			->with('user')
+			->willReturn(300);
+		$this->userManager->expects($this->never())
+			->method('checkPassword');
+		$this->accountLockout->expects($this->never())
+			->method('recordFailure');
+
+		// the very same result as a wrong password, so that the lockout does not
+		// become a user enumeration oracle
+		$result = $this->controller->checkPerson('user', 'password');
+		$this->assertEquals(102, $result->getStatusCode());
+	}
+
+	public function testCheckPersonSuccessResetsTheCounter() {
+		$this->userManager->expects($this->once())
+			->method('checkPassword')
+			->willReturn($this->getUserMock());
+		$this->accountLockout->expects($this->once())
+			->method('clearFailures')
+			->with('user', 'foo');
+		$this->accountLockout->expects($this->never())
+			->method('recordFailure');
+
+		$result = $this->controller->checkPerson('user', 'password');
+		$this->assertEquals(100, $result->getStatusCode());
+	}
+
 	public function getAttributeDataProvider() {
 		return [
 			['app', null],
@@ -123,7 +172,7 @@ class OcsControllerTest extends TestCase {
 
 		$stmt = $this->createMock(Statement::class);
 		$stmt->expects($this->once())
-			->method('execute');
+			->method('executeQuery');
 
 		$this->dbConn->expects($this->once())
 			->method('prepare')
@@ -175,7 +224,7 @@ class OcsControllerTest extends TestCase {
 
 		$stmt = $this->createMock(Statement::class);
 		$stmt->expects($this->once())
-			->method('execute')
+			->method('executeStatement')
 			->with([$user->getUID(), $app, $key]);
 
 		$this->dbConn->expects($this->once())

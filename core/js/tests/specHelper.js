@@ -97,7 +97,9 @@ window.oc_config = {
 	blacklist_files_regex: '\\.(part|filepart)$'
 };
 window.oc_appconfig = {
-	core: {}
+	core: {},
+	files: {},
+	files_sharing: {}
 };
 window.oc_defaults = {};
 window.oc_requesttoken = 'testrequesttoken';
@@ -113,6 +115,13 @@ window.Snap.prototype = {
 };
 
 window.isPhantom = /phantom/i.test(navigator.userAgent);
+
+// jasmine 5.x removed the global jasmine.pp utility that jasmine-sinon@0.4.0 relies on
+if (typeof jasmine !== 'undefined' && typeof jasmine.pp !== 'function') {
+	jasmine.pp = function(value) {
+		return JSON.stringify(value);
+	};
+}
 
 // global setup for all tests
 (function setupTests() {

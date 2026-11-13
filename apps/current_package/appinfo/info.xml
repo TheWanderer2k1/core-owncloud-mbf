@@ -7,7 +7,7 @@
   <version>1.0.0</version>
   <namespace>CurrentPackage</namespace>
   <dependencies>
-    <owncloud min-version="10.0" max-version="10.99" />
+    <owncloud min-version="10.0" max-version="11" />
   </dependencies>
   <settings>
       <personal>OCA\CurrentPackage\Panel</personal>

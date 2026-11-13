@@ -236,16 +236,24 @@ class TrashbinContext implements Context {
 			__METHOD__ . " $collectionPath"
 		);
 
+		$subfolder = parse_url($this->featureContext->getBaseUrl(), PHP_URL_PATH);
+		if ($subfolder === null) {
+			$subfolder = "";
+			$subfolderWithSlashAtEnd = "";
+		} else {
+			$subfolderWithSlashAtEnd = \trim($subfolder, "/") . "/";
+		}
+
 		$files = $this->getTrashbinContentFromResponseXml($responseXml);
 		// filter out the collection itself, we only want to return the members
 		$files = \array_filter(
 			$files,
-			static function ($element) use ($user, $collectionPath) {
+			static function ($element) use ($user, $collectionPath, $subfolder) {
 				$path = $collectionPath;
 				if ($path !== "") {
 					$path = $path . "/";
 				}
-				return ($element['href'] !== "/remote.php/dav/trash-bin/$user/$path");
+				return ($element['href'] !== "$subfolder/remote.php/dav/trash-bin/$user/$path");
 			}
 		);
 
@@ -254,7 +262,7 @@ class TrashbinContext implements Context {
 			// avoid "common" situations that could cause infinite recursion.
 			$trashbinRef = $file["href"];
 			$trimmedTrashbinRef = \trim($trashbinRef, "/");
-			$expectedStart = "remote.php/dav/trash-bin/$user";
+			$expectedStart = "{$subfolderWithSlashAtEnd}remote.php/dav/trash-bin/$user";
 			$expectedStartLength = \strlen($expectedStart);
 			if ((\substr($trimmedTrashbinRef, 0, $expectedStartLength) !== $expectedStart)
 				|| (\strlen($trimmedTrashbinRef) === $expectedStartLength)
@@ -715,11 +723,12 @@ class TrashbinContext implements Context {
 	 *
 	 * @param string|null $user
 	 * @param string|null $originalPath
+	 * @param bool $checkRelativeAndAbsolutePath
 	 *
 	 * @return bool
 	 * @throws Exception
 	 */
-	private function isInTrash(?string $user, ?string $originalPath):bool {
+	private function isInTrash(?string $user, ?string $originalPath, bool $checkRelativeAndAbsolutePath = false):bool {
 		$techPreviewHadToBeEnabled = $this->occContext->enableDAVTechPreview();
 		$res = $this->featureContext->getResponse();
 		$listing = $this->listTrashbinFolder($user);
@@ -729,12 +738,16 @@ class TrashbinContext implements Context {
 			$this->occContext->disableDAVTechPreview();
 		}
 
-		// we don't care if the test step writes a leading "/" or not
-		$originalPath = \ltrim($originalPath, '/');
-
 		foreach ($listing as $entry) {
-			if ($entry['original-location'] !== null && \ltrim($entry['original-location'], '/') === $originalPath) {
-				return true;
+			if (\array_key_exists('original-location', $entry)) {
+				// First check if the normally-expected relative path matches the desired one
+				if ($entry['original-location'] === ltrim($originalPath, '/')) {
+					return true;
+				}
+				// If we have been requested to also check for the absolute path, then do that.
+				if ($checkRelativeAndAbsolutePath && $entry['original-location'] === '/' . ltrim($originalPath, '/')) {
+					return true;
+				}
 			}
 		}
 		return false;
@@ -949,7 +962,7 @@ class TrashbinContext implements Context {
 	 */
 	public function elementInTrashHasBeenRestored(string $user, string $originalPath):void {
 		$this->restoreElement($user, $originalPath);
-		if ($this->isInTrash($user, $originalPath)) {
+		if ($this->isInTrash($user, $originalPath, true)) {
 			throw new Exception("File previously located at $originalPath is still in the trashbin");
 		}
 	}
@@ -1009,8 +1022,12 @@ class TrashbinContext implements Context {
 		string $originalPath
 	):void {
 		$user = $this->featureContext->getActualUsername($user);
+		// The step may pass a relative path (no leading slash) or an absolute path
+		// The Trashbin API should always return a relative path. But to be sure here
+		// we check that the element is not in the trashbin under either path form
+		// by passing boolean "true" in the 3rd parameter.
 		Assert::assertFalse(
-			$this->isInTrash($user, $originalPath),
+			$this->isInTrash($user, $originalPath, true),
 			"File previously located at $originalPath was found in the trashbin of user $user"
 		);
 	}

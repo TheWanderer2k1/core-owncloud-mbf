@@ -60,9 +60,7 @@ class Db implements IDb {
 	 * @inheritdoc
 	 */
 	public function prepareQuery($sql, $limit = null, $offset = null) {
-		$isManipulation = \OC_DB::isManipulation($sql);
-		$statement = $this->connection->prepare($sql, $limit, $offset);
-		return new \OC_DB_StatementWrapper($statement, $isManipulation);
+		return $this->connection->prepare($sql, $limit, $offset);
 	}
 
 	/**
@@ -236,7 +234,7 @@ class Db implements IDb {
 	/**
 	 * @inheritdoc
 	 */
-	public function escapeLikeParameter($param) {
+	public function escapeLikeParameter(string $param): string {
 		return $this->connection->escapeLikeParameter($param);
 	}
 

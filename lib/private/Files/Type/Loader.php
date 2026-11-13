@@ -21,6 +21,8 @@
 
 namespace OC\Files\Type;
 
+use Doctrine\DBAL\Exception;
+use OC\Memcache\LocalCacheFactory;
 use OCP\Files\IMimeTypeLoader;
 use OCP\IDBConnection;
 use OCP\ICacheFactory;
@@ -36,6 +38,13 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 class Loader implements IMimeTypeLoader {
 	public const CACHE_PREFIX_FOR_ID = ':id:';
 	public const CACHE_PREFIX_FOR_MIME = ':mime:';
+
+	/**
+	 * The mimetype table only ever grows, so a cached entry cannot become
+	 * wrong - but reset() only clears the cache of the node it runs on, so
+	 * entries need to expire for the others to pick up a repair.
+	 */
+	public const CACHE_TTL = 24 * 3600;
 
 	/** @var IDBConnection */
 	private $dbConnection;
@@ -54,7 +63,7 @@ class Loader implements IMimeTypeLoader {
 	 */
 	public function __construct(IDBConnection $dbConnection, ICacheFactory $cacheFactory) {
 		$this->dbConnection = $dbConnection;
-		$this->memcache = $cacheFactory->create('mimetypes');
+		$this->memcache = LocalCacheFactory::create($cacheFactory, 'mimetypes');
 		$this->mimetypes = [];
 		$this->mimetypeIds = [];
 	}
@@ -141,7 +150,8 @@ class Loader implements IMimeTypeLoader {
 	 * Store a mimetype in the DB
 	 *
 	 * @param string $mimetype
-	 * @param int inserted ID
+	 * @return mixed
+	 * @throws Exception
 	 */
 	protected function store($mimetype) {
 		try {
@@ -164,11 +174,13 @@ class Loader implements IMimeTypeLoader {
 					$fetch->createNamedParameter($mimetype)
 				)
 			);
-		$row = $fetch->execute()->fetch();
+		$r = $fetch->execute();
+		$row = $r->fetchAssociative();
+		$r->free();
 
 		// update cache
-		$this->memcache->set(self::CACHE_PREFIX_FOR_ID . $row['id'], $mimetype);
-		$this->memcache->set(self::CACHE_PREFIX_FOR_MIME . $mimetype, $row['id']);
+		$this->memcache->set(self::CACHE_PREFIX_FOR_ID . $row['id'], $mimetype, self::CACHE_TTL);
+		$this->memcache->set(self::CACHE_PREFIX_FOR_MIME . $mimetype, $row['id'], self::CACHE_TTL);
 
 		// update local vars
 		$this->mimetypes[$row['id']] = $mimetype;
@@ -224,18 +236,18 @@ class Loader implements IMimeTypeLoader {
 		$result = $qb->execute();
 
 		$id = null;
-		if (($row = $result->fetch()) !== false) {
+		if (($row = $result->fetchAssociative()) !== false) {
 			$id = $row['id'];
 
 			// update cache
-			$this->memcache->set(self::CACHE_PREFIX_FOR_ID . $row['id'], $row['mimetype']);
-			$this->memcache->set(self::CACHE_PREFIX_FOR_MIME . $row['mimetype'], $row['id']);
+			$this->memcache->set(self::CACHE_PREFIX_FOR_ID . $row['id'], $row['mimetype'], self::CACHE_TTL);
+			$this->memcache->set(self::CACHE_PREFIX_FOR_MIME . $row['mimetype'], $row['id'], self::CACHE_TTL);
 
 			// update local vars
 			$this->mimetypes[$row['id']] = $row['mimetype'];
 			$this->mimetypeIds[$row['mimetype']] = $row['id'];
 		}
-		$result->closeCursor();
+		$result->free();
 
 		return $id;
 	}
@@ -258,18 +270,18 @@ class Loader implements IMimeTypeLoader {
 		$result = $qb->execute();
 
 		$mimetype = null;
-		if (($row = $result->fetch()) !== false) {
+		if (($row = $result->fetchAssociative()) !== false) {
 			$mimetype = $row['mimetype'];
 
 			// update cache
-			$this->memcache->set(self::CACHE_PREFIX_FOR_ID . $row['id'], $row['mimetype']);
-			$this->memcache->set(self::CACHE_PREFIX_FOR_MIME . $row['mimetype'], $row['id']);
+			$this->memcache->set(self::CACHE_PREFIX_FOR_ID . $row['id'], $row['mimetype'], self::CACHE_TTL);
+			$this->memcache->set(self::CACHE_PREFIX_FOR_MIME . $row['mimetype'], $row['id'], self::CACHE_TTL);
 
 			// update local vars
 			$this->mimetypes[$row['id']] = $row['mimetype'];
 			$this->mimetypeIds[$row['mimetype']] = $row['id'];
 		}
-		$result->closeCursor();
+		$result->free();
 
 		return $mimetype;
 	}

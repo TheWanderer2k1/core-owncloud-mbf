@@ -472,7 +472,7 @@ class Encryption extends Wrapper {
 					if (!empty($encryptionModuleId)) {
 						$encryptionModule = $this->encryptionManager->getEncryptionModule($encryptionModuleId);
 						$shouldEncrypt = true;
-					} elseif (empty($encryptionModuleId) && $info['encrypted'] === true) {
+					} elseif ($info !== false && $info->isEncrypted()) {
 						// we come from a old installation. No header and/or no module defined
 						// but the file is encrypted. In this case we need to use the
 						// OC_DEFAULT_MODULE to read the file
@@ -855,8 +855,12 @@ class Encryption extends Wrapper {
 				\fclose($target);
 			} catch (\Exception $e) {
 				Encryption::setDisableWriteEncryption(false);
-				\fclose($source);
-				\fclose($target);
+				if (\is_resource($source)) {
+					\fclose($source);
+				}
+				if (\is_resource($target)) {
+					\fclose($target);
+				}
 				throw $e;
 			}
 			if ($result) {
@@ -988,9 +992,9 @@ class Encryption extends Wrapper {
 				$path = $realFile;
 			}
 		}
-		$firstBlock = $this->readFirstBlock($path);
+		$firstBlock = $this->readFirstBlock($path) ?? '';
 
-		if (\substr($firstBlock, 0, \strlen(Util::HEADER_START)) === Util::HEADER_START) {
+		if (str_starts_with($firstBlock, Util::HEADER_START)) {
 			$headerSize = $this->util->getHeaderSize();
 		}
 

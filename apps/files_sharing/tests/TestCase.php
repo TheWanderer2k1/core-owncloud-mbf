@@ -125,8 +125,7 @@ abstract class TestCase extends \Test\TestCase {
 	}
 
 	protected function tearDown(): void {
-		$query = \OCP\DB::prepare('DELETE FROM `*PREFIX*share`');
-		$query->execute();
+		\OC::$server->getDatabaseConnection()->executeStatement('DELETE FROM `*PREFIX*share`');
 
 		parent::tearDown();
 	}
@@ -180,12 +179,6 @@ abstract class TestCase extends \Test\TestCase {
 	 * reset init status for the share storage
 	 */
 	protected static function resetStorage() {
-		$storage = new \ReflectionClass(SharedStorage::class);
-		$isInitialized = $storage->getProperty('initialized');
-		$isInitialized->setAccessible(true);
-		$isInitialized->setValue($storage, false);
-		$isInitialized->setAccessible(false);
-
 		$storage = new \ReflectionClass(Storage::class);
 		$property = $storage->getProperty('localCache');
 		$property->setAccessible(true);
@@ -219,7 +212,7 @@ abstract class TestCase extends \Test\TestCase {
 		$share = null;
 
 		if ($result) {
-			$share = $result->fetchRow();
+			$share = $result->fetchAssociative();
 		}
 
 		return $share;

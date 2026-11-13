@@ -57,7 +57,7 @@ interface IDBConnection {
 	 * @param string $sql the sql query with ? placeholder for params
 	 * @param int $limit the maximum number of rows
 	 * @param int $offset from which row we want to start
-	 * @return \Doctrine\DBAL\Driver\Statement The prepared statement.
+	 * @return \Doctrine\DBAL\Statement The prepared statement.
 	 * @since 6.0.0
 	 */
 	public function prepare($sql, $limit=null, $offset=null);
@@ -71,7 +71,7 @@ interface IDBConnection {
 	 * @param string $query The SQL query to execute.
 	 * @param string[] $params The parameters to bind to the query, if any.
 	 * @param array $types The types the previous parameters are in.
-	 * @return \Doctrine\DBAL\Driver\Statement The executed statement.
+	 * @return \Doctrine\DBAL\Result
 	 * @since 8.0.0
 	 */
 	public function executeQuery($query, array $params = [], $types = []);
@@ -128,7 +128,7 @@ interface IDBConnection {
 	 *				If this is null or an empty array, all keys of $input will be compared
 	 *				Please note: text fields (clob) must not be used in the compare array
 	 * @return int number of inserted rows
-	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Doctrine\DBAL\Exception
 	 * @since 6.0.0 - parameter $compare was added in 8.1.0, return type changed from boolean in 8.1.0
 	 */
 	public function insertIfNotExist($table, $input, array $compare = null);
@@ -140,9 +140,11 @@ interface IDBConnection {
 	 * @param array $input data that should be inserted into the table  (column name => value)
 	 * @param array|null $compare List of values that should be checked for "if not exists"
 	 *				If this is null or an empty array, all keys of $input will be compared
-	 *				Please note: text fields (clob) must not be used in the compare array
+	 *				Please note: on Oracle a text field (clob) in the compare array is
+	 *				compared as char and therefore limited to 4000 bytes, and a binary
+	 *				field (blob) cannot be compared at all
 	 * @return int number of affected rows
-	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Doctrine\DBAL\Exception
 	 * @since 10.0.3
 	 */
 	public function upsert($table, $input, array $compare = null);
@@ -155,7 +157,7 @@ interface IDBConnection {
 	 * @param array $values (column name => value)
 	 * @param array $updatePreconditionValues ensure values match preconditions (column name => value)
 	 * @return int number of new rows
-	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Doctrine\DBAL\Exception
 	 * @throws PreconditionNotMetException
 	 * @since 9.0.0
 	 */
@@ -299,7 +301,7 @@ interface IDBConnection {
 	 * @return string
 	 * @since 9.0.0
 	 */
-	public function escapeLikeParameter($param);
+	public function escapeLikeParameter(string $param): string;
 
 	/**
 	 * Create the schema of the connected database

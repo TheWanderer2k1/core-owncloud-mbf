@@ -239,8 +239,8 @@ class UsersController extends Controller {
 					WHERE s.id = ? AND f.path = 'files'";
 
 			$stmt = $connection->prepare($sql);
-			$stmt->execute([$storageId]);
-			$row = $stmt->fetch();
+			$result = $stmt->executeQuery([$storageId]);
+			$row = $result->fetchAssociative();
 
 			$used = isset($row['size']) ? (int)$row['size'] : 0;
 		} catch (\Exception $e) {
@@ -293,7 +293,7 @@ class UsersController extends Controller {
 			throw new \Exception($this->l10n->t('Couldn\'t change the email address because the user does not exist'));
 		}
 
-		$splittedToken = \explode(':', $this->config->getUserValue($userId, 'owncloud', 'changeMail', null));
+		$splittedToken = \explode(':', $this->config->getUserValue($userId, 'owncloud', 'changeMail', null) ?? '');
 		if (\count($splittedToken) !== 3) {
 			$this->config->deleteUserValue($userId, 'owncloud', 'changeMail');
 			throw new \Exception($this->l10n->t('Couldn\'t change the email address because the token is invalid'));
@@ -1020,7 +1020,7 @@ class UsersController extends Controller {
 
 		// admins can set email without verification
 		if ($mailAddress === '' || $this->isAdmin) {
-			$this->setEmailAddress($userId, $mailAddress);
+			$this->setEmailAddress($id, $mailAddress);
 			return new DataResponse(
 				[
 					'status' => 'success',
@@ -1033,7 +1033,7 @@ class UsersController extends Controller {
 		}
 
 		try {
-			if ($this->sendEmail($userId, $mailAddress)) {
+			if ($this->sendEmail($id, $mailAddress)) {
 				return new DataResponse(
 					[
 						'status' => 'success',

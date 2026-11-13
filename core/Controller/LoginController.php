@@ -25,6 +25,7 @@
 
 namespace OC\Core\Controller;
 
+use OC\Authentication\AccountLockout\AccountLockedException;
 use OC\Authentication\TwoFactorAuth\Manager;
 use OC\User\Session;
 use OC_App;
@@ -165,11 +166,9 @@ class LoginController extends Controller {
 			// if the user exists, replace the userid with the username, e.g. for LDAP accounts
 			// that have the owncloud internal username set to a uuid.
 			$u = $this->userManager->get($user);
-			if ($u !== null) {
+			$parameters['loginName'] = $user;
+			if ($u !== null && \is_string($u->getUserName()) && $u->getUserName() !== '') {
 				$parameters['loginName'] = $u->getUserName();
-			}
-			if (!\is_string($parameters['loginName']) || $parameters['loginName'] === '') {
-				$parameters['loginName'] = $user;
 			}
 			$parameters['user_autofocus'] = false;
 		} else {
@@ -182,14 +181,7 @@ class LoginController extends Controller {
 
 		$parameters['canResetPassword'] = true;
 		$parameters['resetPasswordLink'] = $this->config->getSystemValue('lost_password_link', '');
-		if (!$parameters['resetPasswordLink']) {
-			if ($user !== null && $user !== '') {
-				$userObj = $this->userManager->get($user);
-				if ($userObj instanceof IUser) {
-					$parameters['canResetPassword'] = $userObj->canChangePassword();
-				}
-			}
-		} elseif ($parameters['resetPasswordLink'] === 'disabled') {
+		if ($parameters['resetPasswordLink'] === 'disabled') {
 			$parameters['canResetPassword'] = false;
 		}
 
@@ -201,14 +193,6 @@ class LoginController extends Controller {
 		$parameters['alt_login'] = $altLogins;
 		$parameters['rememberLoginAllowed'] = OC_Util::rememberLoginAllowed();
 		$parameters['rememberLoginState'] = !empty($remember_login) ? $remember_login : 0;
-
-		if ($user !== null && $user !== '') {
-			$parameters['loginName'] = $user;
-			$parameters['user_autofocus'] = false;
-		} else {
-			$parameters['loginName'] = '';
-			$parameters['user_autofocus'] = true;
-		}
 
 		/**
 		 * If redirect_url is not empty and remember_login is null and
@@ -266,20 +250,28 @@ class LoginController extends Controller {
 	 */
 	public function tryLogin($user, $password, $redirect_url, $timezone = null, $remember_login = null) {
 		$originalUser = $user;
+		$lockoutMessage = null;
 		// TODO: Add all the insane error handling
-		$loginResult = $this->userSession->login($user, $password);
-		if ($loginResult !== true && $this->config->getSystemValue('strict_login_enforced', false) !== true) {
-			$users = $this->userManager->getByEmail($user);
-			// we only allow login by email if unique
-			if (\count($users) === 1) {
-				$user = $users[0]->getUID();
-				$loginResult = $this->userSession->login($user, $password);
+		try {
+			$loginResult = $this->userSession->login($user, $password);
+			if ($loginResult !== true && $this->config->getSystemValue('strict_login_enforced', false) !== true) {
+				$users = $this->userManager->getByEmail($user);
+				// we only allow login by email if unique
+				if (\count($users) === 1) {
+					$user = $users[0]->getUID();
+					$loginResult = $this->userSession->login($user, $password);
+				}
 			}
+		} catch (AccountLockedException $e) {
+			// the lockout has to be explained on the login form - letting the
+			// exception through would render an error page instead
+			$loginResult = false;
+			$lockoutMessage = $e->getTranslatedMessage();
 		}
 		if ($loginResult !== true) {
-			$this->session->set('loginMessages', [
-				['invalidpassword'], []
-			]);
+			$this->session->set('loginMessages', $lockoutMessage === null
+				? [['invalidpassword'], []]
+				: [[], [$lockoutMessage]]);
 			$args = [];
 			// Read current user and append if possible - we need to return the unmodified user otherwise we will leak the login name
 			if ($user !== null) {

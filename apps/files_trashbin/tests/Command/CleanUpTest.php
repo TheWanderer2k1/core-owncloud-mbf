@@ -85,7 +85,7 @@ class CleanUpTest extends TestCase {
 		$result = $getAllQuery->select('id')
 			->from($this->trashTable)
 			->execute()
-			->fetchAll();
+			->fetchAllAssociative();
 		$this->assertCount(10, $result);
 	}
 
@@ -118,7 +118,7 @@ class CleanUpTest extends TestCase {
 			$query = $this->dbConnection->getQueryBuilder();
 			$result = $query->select('user')
 				->from($this->trashTable)
-				->execute()->fetchAll();
+				->execute()->fetchAllAssociative();
 			$this->assertCount(5, $result);
 			foreach ($result as $r) {
 				$this->assertSame('user1', $r['user']);
@@ -130,7 +130,7 @@ class CleanUpTest extends TestCase {
 			$result = $getAllQuery->select('id')
 				->from($this->trashTable)
 				->execute()
-				->fetchAll();
+				->fetchAllAssociative();
 			$this->assertCount(10, $result);
 		}
 	}
@@ -177,7 +177,7 @@ class CleanUpTest extends TestCase {
 			->setMethods(['removeDeletedFiles'])
 			->setConstructorArgs([$this->rootFolder, $this->userManager, $this->dbConnection])
 			->getMock();
-		$backend = $this->getMockBuilder('OC_User_Interface')
+		$backend = $this->getMockBuilder(\OCP\UserInterface::class)
 			->disableOriginalConstructor()->getMock();
 		$backend->expects($this->once())->method('getUsers')
 			->with('', 500, 0)

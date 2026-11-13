@@ -35,8 +35,7 @@ class PackagesController extends Controller {
 				->setFirstResult($offset);
 			
 			$result = $qb->execute();
-			$packages = $result->fetchAll();
-			$result->closeCursor();
+			$packages = $result->fetchAllAssociative();
 			
 			return new DataResponse([
 				'status' => 'success',
@@ -71,8 +70,7 @@ class PackagesController extends Controller {
 				->where($qb->expr()->eq('code', $qb->createNamedParameter($code)));
 			
 			$result = $qb->execute();
-			$exists = $result->fetch();
-			$result->closeCursor();
+			$exists = $result->fetchAssociative();
 			
 			if ($exists) {
 				return new DataResponse([
@@ -137,8 +135,7 @@ class PackagesController extends Controller {
 				->andWhere($qb->expr()->neq('id', $qb->createNamedParameter($id)));
 			
 			$result = $qb->execute();
-			$exists = $result->fetch();
-			$result->closeCursor();
+			$exists = $result->fetchAssociative();
 			
 			if ($exists) {
 				return new DataResponse([
@@ -216,6 +213,7 @@ class PackagesController extends Controller {
 
 			$db = $this->db;
 
+			$result = '';
 			if (!empty($search)) {
 				$like = '%' . $search . '%';
 
@@ -226,9 +224,8 @@ class PackagesController extends Controller {
 					. ' OR `package_code` LIKE ?'
 					. ' OR `action_type` LIKE ?';
 				$countStmt = $db->prepare($countSql);
-				$countStmt->execute([$like, $like, $like, $like]);
-				$totalRow = $countStmt->fetch();
-				$countStmt->closeCursor();
+				$result = $countStmt->executeQuery([$like, $like, $like, $like]);
+				$totalRow = $result->fetchAssociative();
 
 				// Data with search + pagination
 				$dataSql = 'SELECT h.*, u.displayname FROM `*PREFIX*packagemanager_subscription_history` AS h'
@@ -246,9 +243,8 @@ class PackagesController extends Controller {
 				// Count all
 				$countSql = 'SELECT COUNT(*) as total FROM `*PREFIX*packagemanager_subscription_history`';
 				$countStmt = $db->prepare($countSql);
-				$countStmt->execute();
-				$totalRow = $countStmt->fetch();
-				$countStmt->closeCursor();
+				$result = $countStmt->executeQuery();
+				$totalRow = $result->fetchAssociative();
 
 				// Data with pagination only
 				$dataSql = 'SELECT h.*, u.displayname FROM `*PREFIX*packagemanager_subscription_history` AS h'
@@ -256,12 +252,11 @@ class PackagesController extends Controller {
 					. ' ORDER BY h.created_at DESC'
 					. ' LIMIT ? OFFSET ?';
 				$dataStmt = $db->prepare($dataSql);
-				$dataStmt->execute([$limit, $offset]);
+				$result = $dataStmt->executeQuery([$limit, $offset]);
 			}
 
 			$total = (int)($totalRow['total'] ?? 0);
-			$rows  = $dataStmt->fetchAll();
-			$dataStmt->closeCursor();
+			$rows  = $result->fetchAllAssociative();
 
 			return new DataResponse([
 				'status' => 'success',
@@ -300,13 +295,13 @@ class PackagesController extends Controller {
                     ORDER BY subscription_count DESC';
 
             $result = $this->db->executeQuery($sql);
-			$data = $result->fetchAll();
+			$data = $result->fetchAllAssociative();
 
             $isFirst = true;
             foreach ($data as &$row) {
                 // stopgap measure to match landing page expectation
                 if (empty($row['description'])) {
-                    $row['description'] = 'Placeholder';
+                    $row['description'] = '';
                 }
 
                 // remove the sort field

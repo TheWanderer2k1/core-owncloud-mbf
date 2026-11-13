@@ -21,6 +21,7 @@
 
 namespace OC\Settings\Panels\Admin;
 
+use Doctrine\DBAL\TransactionIsolationLevel;
 use OC\Lock\NoopLockingProvider;
 use OC\Settings\Panels\Helper;
 use OCP\IConfig;
@@ -75,9 +76,9 @@ class SecurityWarning implements ISettings {
 			if ($this->dbconnection->getDatabasePlatform() instanceof \Doctrine\DBAL\Platforms\SqlitePlatform) {
 				$template->assign('invalidTransactionIsolationLevel', false);
 			} else {
-				$template->assign('invalidTransactionIsolationLevel', $this->dbconnection->getTransactionIsolation() !== \Doctrine\DBAL\Connection::TRANSACTION_READ_COMMITTED);
+				$template->assign('invalidTransactionIsolationLevel', $this->dbconnection->getTransactionIsolation() !== TransactionIsolationLevel::READ_COMMITTED);
 			}
-		} catch (\Doctrine\DBAL\DBALException $e) {
+		} catch (\Doctrine\DBAL\Exception $e) {
 			// ignore
 			$template->assign('invalidTransactionIsolationLevel', false);
 		}
@@ -95,7 +96,7 @@ class SecurityWarning implements ISettings {
 		}
 		$template->assign('OutdatedCacheWarning', $outdatedCaches);
 		$template->assign('has_fileinfo', $this->helper->fileInfoLoaded());
-		$databaseOverload = (\strpos($this->config->getSystemValue('dbtype'), 'sqlite') !== false);
+		$databaseOverload = (\strpos($this->config->getSystemValue('dbtype') ?? '', 'sqlite') !== false);
 		$template->assign('databaseOverload', $databaseOverload);
 		if ($this->lockingProvider instanceof NoopLockingProvider) {
 			$template->assign('fileLockingType', 'none');

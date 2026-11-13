@@ -9,7 +9,8 @@
 
 namespace Test\DB;
 
-use Doctrine\DBAL\DBALException;
+use Doctrine\DBAL\Exception as DBALException;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Platforms\OraclePlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\DBAL\Schema\SchemaConfig;
@@ -62,12 +63,12 @@ class MigratorTest extends \Test\TestCase {
 		// Try to delete if exists (IF EXISTS NOT SUPPORTED IN ORACLE)
 		try {
 			$this->connection->exec('DROP TABLE ' . $this->connection->quoteIdentifier($this->tableNameTmp));
-		} catch (\Doctrine\DBAL\DBALException $e) {
+		} catch (DBALException $e) {
 		}
 
 		try {
 			$this->connection->exec('DROP TABLE ' . $this->connection->quoteIdentifier($this->tableName));
-		} catch (\Doctrine\DBAL\DBALException $e) {
+		} catch (DBALException $e) {
 		}
 		parent::tearDown();
 	}
@@ -136,7 +137,9 @@ class MigratorTest extends \Test\TestCase {
 		} catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException $e) {
 			$caught = true;
 			// makes PostgreSQL happier after an exception (and we don't have rollback yet on the public API...)
-			$this->connection->commit();
+			if (!$this->connection->getDatabasePlatform() instanceof MySQLPlatform) {
+				$this->connection->commit();
+			}
 		}
 		$this->assertTrue($caught);
 	}

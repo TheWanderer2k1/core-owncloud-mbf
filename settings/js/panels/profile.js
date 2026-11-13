@@ -237,7 +237,7 @@ $(document).ready(function () {
 		// Serialize the data
 		var post = $("#languageinput").serialize();
 		// Ajax foo
-		$.post('ajax/setlanguage.php', post, function (data) {
+		$.post(OC.generateUrl('/settings/ajax/setlanguage'), post, function (data) {
 			if (data.status === "success") {
 				location.reload();
 			}

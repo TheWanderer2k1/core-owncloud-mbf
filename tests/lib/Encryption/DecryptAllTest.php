@@ -21,7 +21,7 @@
 
 namespace Test\Encryption;
 
-use Doctrine\DBAL\Statement;
+use Doctrine\DBAL\Result;
 use OC\Encryption\DecryptAll;
 use OC\Encryption\Exceptions\DecryptionFailedException;
 use OC\Encryption\Manager;
@@ -373,25 +373,23 @@ class DecryptAllTest extends TestCase {
 		$idbConnection = $this->createMock(IDBConnection::class);
 		$iqueryBuilder = $this->createMock(IQueryBuilder::class);
 		$iexpressionBuilder = $this->createMock(IExpressionBuilder::class);
-		$resultStatement = $this->createMock(Statement::class);
+		$resultStatement = $this->createMock(Result::class);
 		$resultStatement
-			->expects($this->any())
-			->method('fetch')
+			->method('fetchAssociative')
 			->willReturnOnConsecutiveCalls(
 				['count' => '1'],
 				$user1,
 				$user1,
 			);
-		$resultStatement->expects($this->any())
-			->method('closeCursor')
-			->willReturn(true);
-		$iexpressionBuilder->expects($this->any())
+		$resultStatement
+			->method('free');
+		$iexpressionBuilder
 			->method('gt')
 			->willReturn('2');
-		$iqueryBuilder->expects($this->any())
+		$iqueryBuilder
 			->method('select')
 			->willReturn($iqueryBuilder);
-		$iqueryBuilder->expects($this->any())
+		$iqueryBuilder
 			->method('from')
 			->willReturn($iqueryBuilder);
 		$iqueryBuilder->expects($this->any())
@@ -524,7 +522,9 @@ class DecryptAllTest extends TestCase {
 		$this->view->expects($this->any())->method('is_dir')
 			->willReturnCallback(
 				function ($path) {
-					if ($path === '/user1/files/foo') {
+					// the "files" folder is seeded into the walk, "files_versions"
+					// and "files_trashbin" do not exist in this scenario
+					if ($path === '/user1/files' || $path === '/user1/files/foo') {
 						return true;
 					}
 					return false;
@@ -554,6 +554,55 @@ class DecryptAllTest extends TestCase {
 		$progressBar = new ProgressBar(new NullOutput());
 
 		self::invokePrivate($instance, 'decryptUsersFiles', ['user1', $progressBar, '']);
+	}
+
+	/**
+	 * files_versions and files_trashbin must be decrypted as well, otherwise
+	 * their leftover "encrypted" filecache flags block encryption:disable.
+	 */
+	public function testDecryptUsersFilesAlsoCoversVersionsAndTrashbin() {
+		/** @var DecryptAll | \PHPUnit\Framework\MockObject\MockObject  $instance */
+		$instance = $this->getMockBuilder(DecryptAll::class)
+			->setConstructorArgs(
+				[
+					$this->encryptionManager,
+					$this->userManager,
+					$this->view,
+					$this->logger
+				]
+			)
+			->setMethods(['decryptFile'])
+			->getMock();
+
+		// all three top-level folders exist for this user
+		$this->view->expects($this->any())->method('is_dir')
+			->willReturnCallback(function ($path) {
+				return \in_array($path, [
+					'/user1/files',
+					'/user1/files_versions',
+					'/user1/files_trashbin',
+				], true);
+			});
+
+		$storage = $this->createMock(\OC\Files\Storage\Local::class);
+		$storage->expects($this->any())->method('instanceOfStorage')->willReturn(false);
+
+		$visited = [];
+		$this->view->expects($this->exactly(3))
+			->method('getDirectoryContent')
+			->willReturnCallback(function ($root) use (&$visited) {
+				$visited[] = $root;
+				return [];
+			});
+
+		$progressBar = new ProgressBar(new NullOutput());
+		self::invokePrivate($instance, 'decryptUsersFiles', ['user1', $progressBar, '']);
+
+		\sort($visited);
+		$this->assertEquals(
+			['/user1/files', '/user1/files_trashbin', '/user1/files_versions'],
+			$visited
+		);
 	}
 
 	public function testDecryptFile() {

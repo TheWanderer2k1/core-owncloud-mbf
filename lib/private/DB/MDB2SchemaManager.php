@@ -28,9 +28,9 @@
 
 namespace OC\DB;
 
-use Doctrine\DBAL\Platforms\MySqlPlatform;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Platforms\OraclePlatform;
-use Doctrine\DBAL\Platforms\PostgreSqlPlatform;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Doctrine\DBAL\Platforms\SqlitePlatform;
 use Doctrine\DBAL\Schema\Schema;
 use OCP\IDBConnection;
@@ -44,17 +44,6 @@ class MDB2SchemaManager {
 	 */
 	public function __construct($conn) {
 		$this->conn = $conn;
-	}
-
-	/**
-	 * saves database scheme to xml file
-	 * @param string $file name of file
-	 * @return bool
-	 *
-	 * TODO: write more documentation
-	 */
-	public function getDbStructure($file) {
-		return \OC\DB\MDB2SchemaWriter::saveSchemaToFile($file, $this->conn);
 	}
 
 	/**
@@ -83,7 +72,7 @@ class MDB2SchemaManager {
 			return new SQLiteMigrator($this->conn, $random, $config, $dispatcher);
 		} elseif ($platform instanceof OraclePlatform) {
 			return new OracleMigrator($this->conn, $random, $config, $dispatcher);
-		} elseif ($platform instanceof MySqlPlatform) {
+		} elseif ($platform instanceof MySQLPlatform) {
 			return new MySQLMigrator($this->conn, $random, $config, $dispatcher);
 		} elseif ($platform instanceof PostgreSqlPlatform) {
 			return new PostgreSqlMigrator($this->conn, $random, $config, $dispatcher);
@@ -117,19 +106,10 @@ class MDB2SchemaManager {
 
 		if ($generateSql) {
 			return $migrator->generateChangeScript($toSchema);
-		} else {
-			$migrator->migrate($toSchema);
-			return true;
 		}
-	}
 
-	/**
-	 * @param \Doctrine\DBAL\Schema\Schema $schema
-	 * @return string
-	 */
-	public function generateChangeScript($schema) {
-		$migrator = $this->getMigrator();
-		return $migrator->generateChangeScript($schema);
+		$migrator->migrate($toSchema);
+		return true;
 	}
 
 	/**
@@ -156,11 +136,15 @@ class MDB2SchemaManager {
 	 * @return bool
 	 */
 	private function executeSchemaChange($schema) {
-		$this->conn->beginTransaction();
-		foreach ($schema->toSql($this->conn->getDatabasePlatform()) as $sql) {
-			$this->conn->query($sql);
+		if (!$this->conn->getDatabasePlatform() instanceof MySQLPlatform) {
+			$this->conn->beginTransaction();
 		}
-		$this->conn->commit();
+		foreach ($schema->toSql($this->conn->getDatabasePlatform()) as $sql) {
+			$this->conn->executeQuery($sql);
+		}
+		if (!$this->conn->getDatabasePlatform() instanceof MySQLPlatform) {
+			$this->conn->commit();
+		}
 
 		if ($this->conn->getDatabasePlatform() instanceof SqlitePlatform) {
 			$this->conn->close();

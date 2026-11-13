@@ -1,0 +1,64 @@
+name: Lint and Code Style
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+    contents: read
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-php-codestyle:
+    name: PHP Code Style
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ["8.3"]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: curl, gd, json, xml, zip
+          ini-values: "memory_limit=1024M"
+        env:
+          # A failed extension or tool is only a warning to setup-php, which means
+          # the step passes and the problem resurfaces later as something unrelated.
+          fail-fast: true
+
+      - name: Install Composer dependencies
+        run: |
+          make install-composer-deps
+          make vendor-bin-deps
+
+      - name: Install Server
+        run: |
+          DATA_DIRECTORY=$(pwd)/data bash tests/drone/install-server.sh
+
+      - name: Run PHP Code Style Checks
+        run: |
+          make test-php-style
+
+      - name: Run PHP Stan
+        run: |
+          make test-php-phpstan
+
+      - name: Run PHP Phan
+        run: |
+          make test-php-phan

@@ -32,8 +32,10 @@
 namespace OC;
 
 use OC\Helper\EnvironmentHelper;
+use OC\Memcache\LocalCacheFactory;
 use OCP\Theme\ITheme;
 use OC_Defaults;
+use OCP\ICache;
 use OCP\ICacheFactory;
 use OCP\IConfig;
 use OCP\IURLGenerator;
@@ -44,10 +46,18 @@ use RuntimeException;
  * Class to generate URLs
  */
 class URLGenerator implements IURLGenerator {
+	/**
+	 * Image paths depend on the server root and the theme, so they are cached
+	 * per node. The TTL only exists as a safety net - nothing invalidates these
+	 * entries, so without it a moved installation would keep serving the old
+	 * paths for the lifetime of the cache.
+	 */
+	private const IMAGE_PATH_TTL = 24 * 3600;
+
 	/** @var IConfig */
 	private $config;
-	/** @var ICacheFactory */
-	private $cacheFactory;
+	/** @var ICache */
+	private $imagePathCache;
 	/** @var IRouter */
 	private $router;
 	/** @var ITheme */
@@ -69,7 +79,7 @@ class URLGenerator implements IURLGenerator {
 		EnvironmentHelper $environmentHelper
 	) {
 		$this->config = $config;
-		$this->cacheFactory = $cacheFactory;
+		$this->imagePathCache = LocalCacheFactory::create($cacheFactory, 'imagePath');
 		$this->router = $router;
 		$this->environmentHelper = $environmentHelper;
 		$this->theme = \OC_Util::getTheme();
@@ -96,7 +106,7 @@ class URLGenerator implements IURLGenerator {
 	 *
 	 * Returns an absolute url to the given route.
 	 */
-	public function linkToRouteAbsolute($routeName, $arguments = []) {
+	public function linkToRouteAbsolute($routeName, $arguments = []): string {
 		return $this->getAbsoluteURL($this->linkToRoute($routeName, $arguments));
 	}
 
@@ -159,16 +169,15 @@ class URLGenerator implements IURLGenerator {
 	 * Returns the path to the image.
 	 */
 	public function imagePath($app, $image) {
-		$cache = $this->cacheFactory->create('imagePath');
 		$cacheKey = $this->theme->getName().'-'.$app.'-'.$image;
-		if ($key = $cache->get($cacheKey)) {
+		if ($key = $this->imagePathCache->get($cacheKey)) {
 			return $key;
 		}
 
 		$path = $this->getImagePath($app, $image);
 
 		if ($path !== '' && $path !== null) {
-			$cache->set($cacheKey, $path);
+			$this->imagePathCache->set($cacheKey, $path, self::IMAGE_PATH_TTL);
 			return $path;
 		} else {
 			throw new RuntimeException(
@@ -237,7 +246,7 @@ class URLGenerator implements IURLGenerator {
 	 * @param string $url the url in the ownCloud host
 	 * @return string the absolute version of the url
 	 */
-	public function getAbsoluteURL($url) {
+	public function getAbsoluteURL($url): string {
 		$webRoot = $this->environmentHelper->getWebRoot();
 		$separator = $url[0] === '/' ? '' : '/';
 

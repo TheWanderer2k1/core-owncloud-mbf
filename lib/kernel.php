@@ -527,6 +527,15 @@ class OC {
 		\spl_autoload_register([self::$loader, 'load']);
 		$loaderEnd = \microtime(true);
 
+		// SECURITY: Disable phpseclib's automatic URL fetching process-wide.
+		// phpseclib's X509 will otherwise follow AIA caIssuers / CRL distribution
+		// point URLs found inside a certificate, which is an SSRF vector when
+		// validating attacker-supplied certificates (e.g. the IntegrityCheck
+		// code-signing verifier). ownCloud never relies on phpseclib fetching
+		// remote URLs, so this is disabled once here at boot rather than toggled
+		// per validation call — a single, greppable, non-hidden global default.
+		\phpseclib3\File\X509::disableURLFetch();
+
 		try {
 			self::initPaths();
 		} catch (\RuntimeException $e) {
@@ -571,7 +580,6 @@ class OC {
 
 		self::setRequiredIniValues();
 		self::handleAuthHeaders();
-		self::registerAutoloaderCache();
 
 		OC_Util::isSetLocaleWorking();
 
@@ -818,24 +826,6 @@ class OC {
 		}
 	}
 
-	protected static function registerAutoloaderCache() {
-		// The class loader takes an optional low-latency cache, which MUST be
-		// namespaced. The instanceid is used for namespacing, but might be
-		// unavailable at this point. Furthermore, it might not be possible to
-		// generate an instanceid via \OC_Util::getInstanceId() because the
-		// config file may not be writable. As such, we only register a class
-		// loader cache if instanceid is available without trying to create one.
-		$instanceId = \OC::$server->getSystemConfig()->getValue('instanceid', null);
-		if ($instanceId) {
-			try {
-				$memcacheFactory = \OC::$server->getMemCacheFactory();
-				'@phan-var \OC\MemCache\Factory $memcacheFactory';
-				self::$loader->setMemoryCache($memcacheFactory->createLocal('Autoloader'));
-			} catch (\Exception $ex) {
-			}
-		}
-	}
-
 	/**
 	 * Handle the request
 	 */
@@ -905,6 +895,7 @@ class OC {
 		if (!self::checkUpgrade(false)
 			&& !$systemConfig->getValue('maintenance', false)) {
 			// For logged-in users: Load everything
+			OC_Util::tearDownFS();  // FS might have been prematurely initialized
 			$userSession = \OC::$server->getUserSession();
 			if ($userSession->isLoggedIn() && $userSession->verifyAuthHeaders($request)) {
 				OC_App::loadApps();

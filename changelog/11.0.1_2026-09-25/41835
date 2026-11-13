@@ -1,0 +1,10 @@
+Bugfix: Release the file handle when a bitmap preview cannot be decoded
+
+Bitmap previews closed the file they had opened only when decoding succeeded, so
+every file that could not be decoded leaked a file handle for the lifetime of
+the process.
+
+Bitmap previews for a file that cannot be opened at all now report no preview
+instead of failing the whole request.
+
+https://github.com/owncloud/core/pull/41835

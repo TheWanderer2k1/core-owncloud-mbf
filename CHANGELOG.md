@@ -1,6 +1,14 @@
 # Table of Contents
 
-* [Changelog for unreleased](#changelog-for-owncloud-core-unreleased-unreleased)
+* [Changelog for 11.1.0](#changelog-for-owncloud-core-1110-2026-11-02)
+* [Changelog for 10.16.6](#changelog-for-owncloud-core-10166-2026-10-06)
+* [Changelog for 11.0.1](#changelog-for-owncloud-core-1101-2026-09-25)
+* [Changelog for 10.16.5](#changelog-for-owncloud-core-10165-2026-09-25)
+* [Changelog for 11.0.0](#changelog-for-owncloud-core-1100-2026-07-30)
+* [Changelog for 10.16.4](#changelog-for-owncloud-core-10164-2026-07-29)
+* [Changelog for 10.16.3](#changelog-for-owncloud-core-10163-2026-05-22)
+* [Changelog for 10.16.2](#changelog-for-owncloud-core-10162-2026-04-02)
+* [Changelog for 10.16.1](#changelog-for-owncloud-core-10161-2026-02-18)
 * [Changelog for 10.16.0](#changelog-for-owncloud-core-10160-2025-10-23)
 * [Changelog for 10.15.3](#changelog-for-owncloud-core-10153-2025-07-04)
 * [Changelog for 10.15.2](#changelog-for-owncloud-core-10152-2025-03-11)
@@ -26,25 +34,1689 @@
 * [Changelog for 10.4.1](#changelog-for-owncloud-core-1041-2020-03-30)
 * [Changelog for 10.4.0](#changelog-for-owncloud-core-1040-2020-02-10)
 * [Changelog for 10.3.2](#changelog-for-owncloud-core-1032-2019-12-04)
-# Changelog for ownCloud Core [unreleased] (UNRELEASED)
+# Changelog for ownCloud Core [11.1.0] (2026-11-02)
 
-The following sections list the changes in ownCloud core unreleased relevant to
+The following sections list the changes in ownCloud core 11.1.0 relevant to
 ownCloud admins and users.
 
-[unreleased]: https://github.com/owncloud/core/compare/v10.16.0...master
+[11.1.0]: https://github.com/owncloud/core/compare/v11.0.1...v11.1.0
 
 ## Summary
 
-* Change - Update PHP dependencies: [#41408](https://github.com/owncloud/core/pull/41408)
+* Security - Temporarily lock out local accounts after repeated failed logins: [#41805](https://github.com/owncloud/core/pull/41805)
+* Bugfix - Rebuild user certificate bundles when the system bundle changes: [#41909](https://github.com/owncloud/core/pull/41909)
+* Bugfix - Regenerate certificate bundles on upgrade: [#41910](https://github.com/owncloud/core/pull/41910)
+* Bugfix - Keep the VERSION file of google/auth: [#41917](https://github.com/owncloud/core/issues/41917)
+* Bugfix - Remove log errors for unset Google Drive time fields: [#41917](https://github.com/owncloud/core/issues/41917)
+* Bugfix - Always verify the signature of installed app packages: [#41955](https://github.com/owncloud/core/pull/41955)
+* Bugfix - Do not append the system certificate bundle to itself: [#41956](https://github.com/owncloud/core/pull/41956)
+* Change - Update PHP dependencies: [#41875](https://github.com/owncloud/core/pull/41875)
+* Change - Update JavaScript dependencies: [#41900](https://github.com/owncloud/core/pull/41900)
+* Change - Update the CA bundle: [#41908](https://github.com/owncloud/core/pull/41908)
+* Enhancement - Add occ user:unlock to lift an account lockout: [#41936](https://github.com/owncloud/core/pull/41936)
 
 ## Details
 
+* Security - Temporarily lock out local accounts after repeated failed logins: [#41805](https://github.com/owncloud/core/pull/41805)
+
+   We've added throttling of password authentication for local accounts. Core did
+   not limit the number of failed password attempts, so an account with a weak
+   password could be brute-forced online without any additional app installed.
+   After five failed attempts, each within 15 minutes of the previous one, an
+   account is now locked for ten minutes, and the login form explains when it can
+   be tried again. The lockout always expires on its own - no administrative unlock
+   is needed and no account is ever disabled permanently. A successful login clears
+   the counter immediately. Accounts of an external backend such as LDAP/AD are not
+   affected, they are throttled by their identity provider. The thresholds can be
+   adjusted with the new `account_lockout.*` config parameters.
+
+   https://github.com/owncloud/core/pull/41805
+   https://doc.owncloud.com/server/next/admin_manual/configuration/server/config_sample_php_parameters.html
+
+* Bugfix - Rebuild user certificate bundles when the system bundle changes: [#41909](https://github.com/owncloud/core/pull/41909)
+
+   A user's certificate bundle includes the system certificate bundle, but the
+   check for a stale user bundle ignored the system bundle's modification time.
+   After an administrator imported or removed a system certificate, users who had
+   uploaded their own certificates kept using the old bundle.
+
+   https://github.com/owncloud/core/pull/41909
+
+* Bugfix - Regenerate certificate bundles on upgrade: [#41910](https://github.com/owncloud/core/pull/41910)
+
+   Outgoing HTTPS requests use a cached certificate bundle in the data directory,
+   which was only rebuilt when the bundled CA certificates had a newer modification
+   time. Deployments that preserve or normalise file timestamps kept trusting root
+   certificates that an update had removed. The system certificate bundle and the
+   user certificate bundles found in the data directory are now regenerated during
+   occ upgrade and occ maintenance:repair.
+
+   https://github.com/owncloud/core/pull/41910
+
+* Bugfix - Keep the VERSION file of google/auth: [#41917](https://github.com/owncloud/core/issues/41917)
+
+   The google/auth library reads its VERSION file for every Google API request. The
+   file was removed when the composer packages were cleaned, so every request of a
+   Google Drive external storage logged an error that the file could not be opened.
+   The file is kept now.
+
+   https://github.com/owncloud/core/issues/41917
+   https://github.com/owncloud/core/pull/41918
+
+* Bugfix - Remove log errors for unset Google Drive time fields: [#41917](https://github.com/owncloud/core/issues/41917)
+
+   Google Drive returns no time for a file the user never opened in Drive. The
+   Google Drive external storage passed this to strtotime(), which is deprecated
+   since PHP 8.1 and logged an error for every such file whenever a folder was
+   listed. Unset times are now handled without the deprecation, the file
+   information stays the same.
+
+   https://github.com/owncloud/core/issues/41917
+   https://github.com/owncloud/core/pull/41919
+
+* Bugfix - Always verify the signature of installed app packages: [#41955](https://github.com/owncloud/core/pull/41955)
+
+   The installer now verifies the signature of every app package it installs or
+   updates. Where code signing is enforced, an app without a signature is only
+   installed when it is listed in `integrity.ignore.missing.app.signature`. An app
+   archive must contain exactly one app folder, named after the app id in its
+   info.xml.
+
+   https://github.com/owncloud/core/pull/41955
+
+* Bugfix - Do not append the system certificate bundle to itself: [#41956](https://github.com/owncloud/core/pull/41956)
+
+   Regenerating the system certificate bundle appended the bundle file that was
+   being rewritten. On local storage the bundled CA certificates ended up in it
+   twice. On object storage the previous bundle was read back, so root certificates
+   that an update had removed were still trusted, and the bundle grew with every
+   regeneration.
+
+   https://github.com/owncloud/core/pull/41956
+
+* Change - Update PHP dependencies: [#41875](https://github.com/owncloud/core/pull/41875)
+
+   The following have been updated:
+
+   * composer/semver (3.5.0 to 3.5.2)
+
+   * doctrine/lexer (3.0.2 to 3.0.3)
+
+   * firebase/php-jwt (v7.2.0 to v7.2.1)
+
+   * google/apiclient (v2.20.0 to v2.20.1)
+
+   * google/apiclient-services (v0.460.0 to v0.465.0)
+
+   * google/auth (v1.55.0 to v1.55.2)
+
+   * guzzlehttp/guzzle (7.15.5 to 7.16.1)
+
+   * guzzlehttp/promises (2.5.3 to 2.6.0)
+
+   * guzzlehttp/psr7 (2.13.1 to 2.13.2)
+
+   * monolog/monolog (3.12.0 to 3.12.1)
+
+   * rhukster/dom-sanitizer (1.0.17 to 1.0.20)
+
+   * symfony/console (v7.4.19 to v7.4.22)
+
+   * symfony/mailer (v7.4.19 to v7.4.22)
+
+   * symfony/mime (v7.4.19 to v7.4.22)
+
+   * symfony/process (v7.4.19 to v7.4.22)
+
+   * symfony/routing (v7.4.18 to v7.4.22)
+
+   * symfony/string (v7.4.19 to v7.4.22)
+
+   * symfony/translation (v7.4.17 to v7.4.22)
+
+   * symfony/polyfill-php80 (v1.37.0 to v1.43.0)
+
+   https://github.com/owncloud/core/pull/41875
+   https://github.com/owncloud/core/pull/41898
+   https://github.com/owncloud/core/pull/41921
+   https://github.com/owncloud/core/pull/41926
+   https://github.com/owncloud/core/pull/41950
+
+* Change - Update JavaScript dependencies: [#41900](https://github.com/owncloud/core/pull/41900)
+
+   The following have been updated:
+
+   * handlebars (4.7.9 to 4.7.10)
+
+   https://github.com/owncloud/core/pull/41900
+
+* Change - Update the CA bundle: [#41908](https://github.com/owncloud/core/pull/41908)
+
+   The bundled CA certificates were replaced with curl's 2026-10-20 extract of the
+   Mozilla root store. This removes emSign ECC Root CA - G3, which anchors eMudhra
+   intermediate CAs whose private keys were compromised.
+
+   The update removes 35 roots in line with the Mozilla store and adds 7. The
+   removed roots include DigiCert Global Root CA, DigiCert Assured ID Root CA,
+   DigiCert High Assurance EV Root CA, the Entrust root CAs, emSign Root CA - C1,
+   emSign ECC Root CA - C3, COMODO Certification Authority and QuoVadis Root CA 2
+   and 3. Outgoing HTTPS connections to servers whose certificates chain only to a
+   removed root now fail verification. To keep trusting such a root, import it with
+   `occ security:certificates:import`.
+
+   https://github.com/owncloud/core/pull/41908
+
+* Enhancement - Add occ user:unlock to lift an account lockout: [#41936](https://github.com/owncloud/core/pull/41936)
+
+   Accounts which are temporarily locked after repeated failed logins can now be
+   unlocked before the lockout expires with `occ user:unlock <login>`. The command
+   takes a username or an email address and also resets the counter of failed
+   attempts.
+
+   https://github.com/owncloud/core/pull/41936
+   https://doc.owncloud.com/server/next/admin_manual/configuration/server/occ_command.html
+
+# Changelog for ownCloud Core [10.16.6] (2026-10-06)
+
+The following sections list the changes in ownCloud core 10.16.6 relevant to
+ownCloud admins and users.
+
+[10.16.6]: https://github.com/owncloud/core/compare/v10.16.5...v10.16.6
+
+## Summary
+
+* Bugfix - Return 404 again for a PROPFIND on a missing path: [#41890](https://github.com/owncloud/core/pull/41890)
+* Change - Update PHP dependencies: [#41876](https://github.com/owncloud/core/pull/41876)
+
+## Details
+
+* Bugfix - Return 404 again for a PROPFIND on a missing path: [#41890](https://github.com/owncloud/core/pull/41890)
+
+   Since 10.16.5, a PROPFIND request on a path that does not exist, or on a
+   create-only share, returned a malformed 207 Multi-Status response instead of 404
+   Not Found. The sabre/event update in 10.16.5 changed the order in which
+   listeners of equal priority run, so the Sabre DAV httpPropFind handler ran
+   before the checkPropFind check. checkPropFind now has a higher priority, so it
+   always runs first.
+
+   https://github.com/owncloud/core/pull/41890
+   https://github.com/owncloud/core/pull/41797
+
+* Change - Update PHP dependencies: [#41876](https://github.com/owncloud/core/pull/41876)
+
+   The following have been updated:
+
+   * composer/semver (3.4.4 to 3.5.0)
+
+   * rhukster/dom-sanitizer (1.0.17 to 1.0.19)
+
+   * symfony/polyfill-php80 (v1.37.0 to v1.43.0)
+
+   https://github.com/owncloud/core/pull/41876
+
+# Changelog for ownCloud Core [11.0.1] (2026-09-25)
+
+The following sections list the changes in ownCloud core 11.0.1 relevant to
+ownCloud admins and users.
+
+[11.0.1]: https://github.com/owncloud/core/compare/v11.0.0...v11.0.1
+
+## Summary
+
+* Security - Prevent unauthorized file access by users: [#41827](https://github.com/owncloud/core/pull/41827)
+* Security - Prevent a security bypass by users: [#41834](https://github.com/owncloud/core/pull/41834)
+* Security - Prevent code execution by administrators: [#41856](https://github.com/owncloud/core/pull/41856)
+* Bugfix - Reduce priority of checkPropFind event: [#41676](https://github.com/owncloud/core/pull/41676)
+* Bugfix - Do not echo secrets when setting config values via occ: [#41779](https://github.com/owncloud/core/issues/41779)
+* Bugfix - Restore index usage for filecache writes on Oracle: [#41782](https://github.com/owncloud/core/issues/41782)
+* Bugfix - Show federated users in the share dialog when local users also match: [#41807](https://github.com/owncloud/core/pull/41807)
+* Bugfix - Avoid a deprecation notice when hashing the file cache path on Oracle: [#41808](https://github.com/owncloud/core/pull/41808)
+* Bugfix - Ship only the app payload in the release tarballs: [#41824](https://github.com/owncloud/core/issues/41824)
+* Bugfix - Release the file handle when a bitmap preview cannot be decoded: [#41835](https://github.com/owncloud/core/pull/41835)
+* Bugfix - Show a media type icon when a preview file cannot be opened: [#41855](https://github.com/owncloud/core/pull/41855)
+* Bugfix - Restrict federated address book sync to the trusted server: [#41869](https://github.com/owncloud/core/pull/41869)
+* Change - Update PHP dependencies: [#41775](https://github.com/owncloud/core/pull/41775)
+* Change - Require rhukster/dom-sanitizer as a tagged release: [#41785](https://github.com/owncloud/core/pull/41785)
+* Change - Restore Oracle database support in the command line installer: [#41808](https://github.com/owncloud/core/pull/41808)
+* Change - Previews are decoded in the format of the file extension: [#41834](https://github.com/owncloud/core/pull/41834)
+* Change - Stricter handling of service handler configuration: [#41856](https://github.com/owncloud/core/pull/41856)
+
+## Details
+
+* Security - Prevent unauthorized file access by users: [#41827](https://github.com/owncloud/core/pull/41827)
+
+   Impact: An authenticated user may be able to read or modify files on the server.
+
+   Description: An input validation issue was addressed with improved validation.
+
+   https://github.com/owncloud/core/pull/41827
+
+* Security - Prevent a security bypass by users: [#41834](https://github.com/owncloud/core/pull/41834)
+
+   Impact: An authenticated user may be able to bypass security restrictions.
+
+   Description: A validation issue was addressed with improved checks.
+
+   https://github.com/owncloud/core/pull/41834
+
+* Security - Prevent code execution by administrators: [#41856](https://github.com/owncloud/core/pull/41856)
+
+   Impact: An administrator may be able to execute arbitrary code on the server.
+
+   Description: An input validation issue was addressed with improved checks.
+
+   https://github.com/owncloud/core/pull/41856
+
+* Bugfix - Reduce priority of checkPropFind event: [#41676](https://github.com/owncloud/core/pull/41676)
+
+   The checkPropFind event that triggers during an HTTP PROPFIND request must
+   happen before the Sabre DAV httpPropFind event. That has been happening because
+   it sorts alphabetically first. This change reduces the priority number of
+   checkPropFind, increasing its priority, so that it always executes first,
+   regardless of any other sort order.
+
+   https://github.com/owncloud/core/pull/41676
+
+* Bugfix - Do not echo secrets when setting config values via occ: [#41779](https://github.com/owncloud/core/issues/41779)
+
+   Config:system:set and config:app:set printed the value that had just been
+   written back to stdout, so every secret configured through occ ended up in the
+   terminal scrollback, the container log or the CI log of whoever ran the command.
+   Administrators who have set secrets through occ should review where that output
+   was kept.
+
+   Both commands now print a placeholder instead of the value when the config key
+   holds a secret. Recognition reuses the existing list of sensitive keys in
+   OC\SystemConfig, which gained an accessor telling whether a key path is
+   sensitive, and falls back to matching the key name against the patterns
+   credential, key, passwd, password, pwd, salt, secret and token. That fallback
+   covers the keys of apps, which core does not know, such as wopi.token.key or
+   jwt_secret. Boolean values keep being shown, as they cannot hold a secret. Only
+   the confirmation output changed, the stored value is written as before.
+
+   https://github.com/owncloud/core/issues/41779
+   https://github.com/owncloud/core/pull/41780
+
+* Bugfix - Restore index usage for filecache writes on Oracle: [#41782](https://github.com/owncloud/core/issues/41782)
+
+   On Oracle every compare column of an upsert was wrapped in to_char(). That cast
+   is only needed for text and binary columns, which Oracle cannot compare
+   directly, but it was applied to all of them - and to_char(column) cannot use an
+   index on that column. Writes to the file cache compare storage and path_hash, so
+   uploads, renames and file scans could no longer use the unique index
+   fs_storage_path_hash and became very slow on large installations.
+
+   Only text and binary compare columns are cast now, so every other comparison
+   uses its index again.
+
+   https://github.com/owncloud/core/issues/41782
+   https://github.com/owncloud/core/pull/41818
+
+* Bugfix - Show federated users in the share dialog when local users also match: [#41807](https://github.com/owncloud/core/pull/41807)
+
+   The share dialog only offered federated users when the search returned no local
+   users and no local groups, so a single local match hid every federated result -
+   including exact federated cloud id matches. Searching for a surname stem shared
+   by local accounts therefore made federated users unreachable unless the full
+   cloud id was typed.
+
+   The suggestion that made this filtering necessary is generated by the server: a
+   search term containing an "@" was always offered as a federated cloud id, even
+   when it was the email address of an existing local account. That guess is now
+   skipped whenever the search matched a local user or group exactly, so the share
+   dialog no longer needs to discard genuine federated results.
+
+   https://github.com/owncloud/enterprise/issues/4392
+   https://github.com/owncloud/core/pull/41807
+
+* Bugfix - Avoid a deprecation notice when hashing the file cache path on Oracle: [#41808](https://github.com/owncloud/core/pull/41808)
+
+   Oracle cannot store empty strings, so the file cache converts them to null
+   before writing a row. For the storage root, whose path is the empty string, that
+   left md5() being called with null. PHP 8 reports that as a deprecated implicit
+   null to string conversion: noise in the log whenever a storage root is inserted,
+   and an error under PHPUnit's strict error handling. The stored path_hash itself
+   was never wrong, because md5(null) coerces to md5('').
+
+   The value is now cast to a string before hashing.
+
+   https://github.com/owncloud/core/pull/41808
+
+* Bugfix - Ship only the app payload in the release tarballs: [#41824](https://github.com/owncloud/core/issues/41824)
+
+   The release bundles contained 13 bundled apps as the working tree they had been
+   built in, rather than as the app's release artifact. Each of those app
+   directories carried `.git/` (a shallow clone including its pack file),
+   `.github/`, `tests/`, `vendor-bin/` and `build/artifacts/`, the last holding a
+   second copy of the app's own tarball. That was 101.94 MB of the 441.8 MB
+   uncompressed complete tarball, in 16 shipped git repositories.
+
+   Three things made it more than dead weight. `files_antivirus` shipped its
+   anti-virus acceptance data, so a ClamAV scan of the tarball, or of any image
+   built from it, reported `Eicar-Test-Signature FOUND` and could be rejected by an
+   anti-virus gate. The development files were covered by the app's
+   `appinfo/signature.json`, so an administrator could not delete them without
+   breaking `occ integrity:check-app`. And the shipped `.git/` carried the release
+   engineer's clone metadata, including their name and e-mail address.
+
+   The affected app releases have been repackaged, and the release tooling now
+   refuses to build a bundle that contains a build working tree, so this cannot
+   recur unnoticed. The standard tarball was affected as well, through
+   `notifications`.
+
+   https://github.com/owncloud/core/issues/41824
+
+* Bugfix - Release the file handle when a bitmap preview cannot be decoded: [#41835](https://github.com/owncloud/core/pull/41835)
+
+   Bitmap previews closed the file they had opened only when decoding succeeded, so
+   every file that could not be decoded leaked a file handle for the lifetime of
+   the process.
+
+   Bitmap previews for a file that cannot be opened at all now report no preview
+   instead of failing the whole request.
+
+   https://github.com/owncloud/core/pull/41835
+
+* Bugfix - Show a media type icon when a preview file cannot be opened: [#41855](https://github.com/owncloud/core/pull/41855)
+
+   Generating an SVG preview read the file without checking that it had been
+   opened. A file the storage could not open, or one whose name the filesystem
+   rejects, made the request fail with a server error instead of falling back to a
+   media type icon. The bitmap providers shared that gap for one of the two values
+   an unsuccessful open can return.
+
+   Generating an SVG preview for a file that opened but then failed to be read - an
+   encrypted file with a missing or damaged key, for instance - already fell back
+   to the icon, but held the file handle and its lock until the request ended. The
+   bitmap providers were not affected by this one.
+
+   Both providers now check the handle before reading, so such a file gets the
+   media type icon, and the SVG provider releases the handle whether or not the
+   read succeeds.
+
+   https://github.com/owncloud/core/pull/41855
+
+* Bugfix - Restrict federated address book sync to the trusted server: [#41869](https://github.com/owncloud/core/pull/41869)
+
+   The federated system address book sync could request resources that do not
+   belong to the trusted server it was syncing with, and could follow redirects
+   away from that server.
+
+   Requests which would leave the trusted server are now refused, and resource
+   references which do not belong to it are skipped and logged.
+
+   https://github.com/owncloud/core/pull/41869
+
+* Change - Update PHP dependencies: [#41775](https://github.com/owncloud/core/pull/41775)
+
+   The following have been updated:
+
+   * composer/semver (3.4.4 to 3.5.0)
+
+   * doctrine/lexer (3.0.1 to 3.0.2)
+
+   * firebase/php-jwt (v7.1.0 to v7.2.0)
+
+   * google/apiclient (v2.19.4 to v2.20.0)
+
+   * google/apiclient-services (v0.452.0 to v0.460.0)
+
+   * google/auth (v1.53.0 to v1.55.0)
+
+   * guzzlehttp/guzzle (7.15.2 to 7.15.5)
+
+   * guzzlehttp/promises (2.5.1 to 2.5.3)
+
+   * guzzlehttp/psr7 (2.13.0 to 2.13.1)
+
+   * laravel/serializable-closure (2.0.15 to 2.1.0)
+
+   * monolog/monolog (3.10.0 to 3.12.0)
+
+   * nikic/php-parser (v5.8.0 to v5.9.0)
+
+   * pear/archive_tar (1.6.0 to 1.6.1)
+
+   * phpseclib/phpseclib (3.0.55 to 3.0.57)
+
+   * punic/punic (3.8.1 to 3.8.2)
+
+   * rhukster/dom-sanitizer (1.0.14 to 1.0.17)
+
+   * sabre/event (5.1.8 to 5.1.9)
+
+   * symfony/console (v7.4.14 to v7.4.19)
+
+   * symfony/event-dispatcher (v7.4.14 to v7.4.17)
+
+   * symfony/mailer (v7.4.14 to v7.4.19)
+
+   * symfony/mime (v7.4.13 to v7.4.19)
+
+   * symfony/process (v7.4.13 to v7.4.19)
+
+   * symfony/routing (v7.4.13 to v7.4.18)
+
+   * symfony/service-contracts (v3.7.1 to v3.7.3)
+
+   * symfony/string (v7.4.13 to v7.4.19)
+
+   * symfony/translation (v7.4.14 to v7.4.17)
+
+   https://github.com/owncloud/core/pull/41775
+   https://github.com/owncloud/core/pull/41791
+   https://github.com/owncloud/core/pull/41797
+   https://github.com/owncloud/core/pull/41809
+   https://github.com/owncloud/core/pull/41829
+   https://github.com/owncloud/core/pull/41839
+   https://github.com/owncloud/core/pull/41842
+   https://github.com/owncloud/core/pull/41864
+
+* Change - Require rhukster/dom-sanitizer as a tagged release: [#41785](https://github.com/owncloud/core/pull/41785)
+
+   Rhukster/dom-sanitizer was required as "dev-main", a branch pin. A branch pin
+   resolves to whatever commit the branch happened to point at when the lock file
+   was written, and it carries no version number. Vulnerability scanners match
+   installed versions against advisory version ranges, so an unversioned dependency
+   can never match any range: scanners silently reported nothing at all for this
+   package, whatever commit was actually shipped.
+
+   It is now required as "^1.0.10" and resolves to 1.0.14. The shipped code is
+   equivalent -- the previously locked commit 02d08ec8 corresponds to tag 1.0.11 --
+   so this is a packaging and auditability change, not a functional one.
+
+   https://github.com/owncloud/core/pull/41785
+
+* Change - Restore Oracle database support in the command line installer: [#41808](https://github.com/owncloud/core/pull/41808)
+
+   The Oracle database layer -- ConnectionFactory, OracleConnection,
+   OracleMigrator, AdapterOCI8 and the OCI expression builder -- has always
+   remained in the code base, but the setup class that makes it reachable had been
+   removed, so an instance could no longer be installed against Oracle at all. That
+   also meant no CI job could exercise that layer.
+
+   The maintenance:install command accepts --database=oci again, together with the
+   --database-connection-string option needed to reach a schema inside an Oracle
+   pluggable database. The web installer is unchanged: Oracle is not offered there,
+   because the default supportedDatabases config still lists only sqlite, mysql and
+   pgsql.
+
+   This restores test coverage for Oracle-specific code paths. It is not a
+   statement about production support for Oracle.
+
+   https://github.com/owncloud/core/pull/41808
+
+* Change - Previews are decoded in the format of the file extension: [#41834](https://github.com/owncloud/core/pull/41834)
+
+   A file whose extension does not match its actual content no longer gets a
+   preview and shows a media type icon instead - for example a JPEG saved as
+   photo.tif. The affected extensions are ai, bw, eps, heic, heif, int, inta, pdf,
+   ps, psd, rgb, rgba, sgi, tif and tiff. Of those providers only SGI and Heic are
+   registered by default, so on a stock install this is visible for bw, int, inta,
+   rgb, rgba, sgi, heic and heif; the rest need their provider enabled in
+   enabledPreviewProviders.
+
+   Font files (otf, pfb, ttf) with mismatched content still get a thumbnail, and
+   real .otf files gain previews they did not have before.
+
+   https://github.com/owncloud/core/pull/41834
+
+* Change - Stricter handling of service handler configuration: [#41856](https://github.com/owncloud/core/pull/41856)
+
+   The appconfig endpoints (`core/ajax/appconfig` and `/settings/appconfig`) no
+   longer read or write the `public_`/`remote_` keys of the `core` app, nor keys of
+   `core` outside `[a-zA-Z0-9_.-]{1,64}`. Scripts which need a handler path should
+   read it with `occ config:app:get`.
+
+   Requesting a service which is not registered now answers 404 on both
+   `public.php` and `remote.php`; refusals on `remote.php` answer 503.
+
+   https://github.com/owncloud/core/pull/41856
+
+# Changelog for ownCloud Core [10.16.5] (2026-09-25)
+
+The following sections list the changes in ownCloud core 10.16.5 relevant to
+ownCloud admins and users.
+
+[10.16.5]: https://github.com/owncloud/core/compare/v10.16.4...v10.16.5
+
+## Summary
+
+* Security - Update PHP dependencies to close published advisories: [#41784](https://github.com/owncloud/core/pull/41784)
+* Security - Prevent code execution by administrators: [#41803](https://github.com/owncloud/core/pull/41803)
+* Security - Prevent unauthorized file access by users: [#41827](https://github.com/owncloud/core/pull/41827)
+* Security - Prevent a security bypass by users: [#41834](https://github.com/owncloud/core/pull/41834)
+* Bugfix - Restore index usage for filecache writes on Oracle: [#41782](https://github.com/owncloud/core/issues/41782)
+* Bugfix - Avoid a deprecation notice when hashing the file cache path on Oracle: [#41808](https://github.com/owncloud/core/pull/41808)
+* Bugfix - Show federated users in the share dialog when local users also match: [#41814](https://github.com/owncloud/core/pull/41814)
+* Bugfix - Speed up Oracle schema introspection: [#41815](https://github.com/owncloud/core/pull/41815)
+* Bugfix - Release the file handle when a bitmap preview cannot be decoded: [#41835](https://github.com/owncloud/core/pull/41835)
+* Bugfix - Report a preview file that cannot be opened without logging noise: [#41855](https://github.com/owncloud/core/pull/41855)
+* Bugfix - Restrict federated address book sync to the trusted server: [#41869](https://github.com/owncloud/core/pull/41869)
+* Change - Update PHP dependencies: [#41787](https://github.com/owncloud/core/pull/41787)
+* Change - Stricter handling of service handler configuration: [#41803](https://github.com/owncloud/core/pull/41803)
+* Change - Previews are decoded in the format of the file extension: [#41834](https://github.com/owncloud/core/pull/41834)
+
+## Details
+
+* Security - Update PHP dependencies to close published advisories: [#41784](https://github.com/owncloud/core/pull/41784)
+
+   The 10.16 branch had not seen a dependency update since the 10.16.4 release, and
+   several bundled packages were carrying published advisories. They have been
+   updated to versions that are not affected:
+
+   - guzzlehttp/guzzle (7.10.0 to 7.15.3) - guzzlehttp/promises (2.3.0 to 2.5.2) -
+   guzzlehttp/psr7 (2.8.0 to 2.13.0) - phpseclib/phpseclib (3.0.52 to 3.0.56) -
+   rhukster/dom-sanitizer (dev-main to 1.0.14) - symfony/polyfill-php80 (v1.33.0 to
+   v1.37.0) - symfony/routing (v5.4.52 to v5.4.53)
+
+   This closes sixteen advisories: CVE-2026-69246, CVE-2026-69245, CVE-2026-67354,
+   CVE-2026-67355, CVE-2026-67353, CVE-2026-67339, CVE-2026-59883, CVE-2026-55767
+   and CVE-2026-55568 in guzzlehttp/guzzle; CVE-2026-59882, CVE-2026-55766,
+   CVE-2026-48998 and CVE-2026-49214 in guzzlehttp/psr7; CVE-2026-55599 in
+   phpseclib/phpseclib; CVE-2026-48784 in symfony/routing; and CVE-2026-40301 in
+   rhukster/dom-sanitizer.
+
+   Rhukster/dom-sanitizer was required as "dev-main", an unversioned branch pin.
+   Such a pin carries no version number, so vulnerability scanners cannot match it
+   against advisory ranges and silently report nothing for the package. It is now
+   required as a tagged release, which both applies the CVE-2026-40301 fix and
+   makes the dependency visible to scanners.
+
+   Firebase/php-jwt remains at 6.10.0 and is still affected by CVE-2025-45769 (low,
+   weak encryption). The advisory is only fixed in 7.0.0, and every 7.x release
+   requires PHP 8.0 or later, so it cannot be applied to the 10.16 line, which
+   supports PHP 7.4.
+
+   https://github.com/owncloud/core/pull/41784
+
+* Security - Prevent code execution by administrators: [#41803](https://github.com/owncloud/core/pull/41803)
+
+   Impact: An administrator may be able to execute arbitrary code on the server.
+
+   Description: An input validation issue was addressed with improved checks.
+
+   https://github.com/owncloud/core/pull/41803
+
+* Security - Prevent unauthorized file access by users: [#41827](https://github.com/owncloud/core/pull/41827)
+
+   Impact: An authenticated user may be able to read or modify files on the server.
+
+   Description: An input validation issue was addressed with improved validation.
+
+   https://github.com/owncloud/core/pull/41827
+   https://github.com/owncloud/core/pull/41863
+
+* Security - Prevent a security bypass by users: [#41834](https://github.com/owncloud/core/pull/41834)
+
+   Impact: An authenticated user may be able to bypass security restrictions.
+
+   Description: A validation issue was addressed with improved checks.
+
+   https://github.com/owncloud/core/pull/41834
+   https://github.com/owncloud/core/pull/41863
+
+* Bugfix - Restore index usage for filecache writes on Oracle: [#41782](https://github.com/owncloud/core/issues/41782)
+
+   On Oracle every compare column of an upsert was wrapped in to_char(). That cast
+   is only needed for text and binary columns, which Oracle cannot compare
+   directly, but it was applied to all of them - and to_char(column) cannot use an
+   index on that column. Writes to the file cache compare storage and path_hash, so
+   uploads, renames and file scans could no longer use the unique index
+   fs_storage_path_hash and became very slow on large installations.
+
+   Only text and binary compare columns are cast now, so every other comparison
+   uses its index again.
+
+   https://github.com/owncloud/core/issues/41782
+   https://github.com/owncloud/core/pull/41783
+
+* Bugfix - Avoid a deprecation notice when hashing the file cache path on Oracle: [#41808](https://github.com/owncloud/core/pull/41808)
+
+   Oracle cannot store empty strings, so the file cache converts them to null
+   before writing a row. For the storage root, whose path is the empty string, that
+   left md5() being called with null. PHP 8 reports that as a deprecated implicit
+   null to string conversion: noise in the log whenever a storage root is inserted,
+   and an error under PHPUnit's strict error handling. The stored path_hash itself
+   was never wrong, because md5(null) coerces to md5('').
+
+   The value is now cast to a string before hashing.
+
+   https://github.com/owncloud/core/pull/41808
+   https://github.com/owncloud/core/pull/41815
+
+* Bugfix - Show federated users in the share dialog when local users also match: [#41814](https://github.com/owncloud/core/pull/41814)
+
+   The share dialog only offered federated users when the search returned no local
+   users and no local groups, so a single local match hid every federated result -
+   including exact federated cloud id matches. Searching for a surname stem shared
+   by local accounts therefore made federated users unreachable unless the full
+   cloud id was typed.
+
+   The suggestion that made this filtering necessary is generated by the server: a
+   search term containing an "@" was always offered as a federated cloud id, even
+   when it was the email address of an existing local account. That guess is now
+   skipped whenever the search matched a local user or group exactly, so the share
+   dialog no longer needs to discard genuine federated results.
+
+   https://github.com/owncloud/enterprise/issues/4392
+   https://github.com/owncloud/core/pull/41814
+
+* Bugfix - Speed up Oracle schema introspection: [#41815](https://github.com/owncloud/core/pull/41815)
+
+   Installing and upgrading ownCloud on Oracle took an unreasonably long time. A
+   fresh `occ maintenance:install` on the 10.16 branch needed over 40 minutes,
+   while the same install on the master branch finished in well under a minute.
+
+   The cause was the bundled doctrine/dbal 2.13, which introspects a schema by
+   describing every table on its own: for each table it issues one query for the
+   columns, one for the indexes, one for the foreign keys and one for the table
+   comment. Each of those queries inlines the table name as a literal, so Oracle
+   cannot share cursors between them and hard parses every single one, which costs
+   a few hundred milliseconds each. The migration code then asks for the full
+   schema once per applied migration, so the number of queries grows with the
+   number of tables multiplied by the number of migrations. With 68 migrations and
+   roughly 48 tables that added up to thousands of hard parsed queries.
+
+   Oracle schema introspection now reads the whole data dictionary with a fixed
+   number of queries instead of four per table. Reading a 48 table schema went down
+   from 194 queries to 6, and `occ maintenance:install` against Oracle on PHP 7.4
+   went down from 43 minutes to 30 seconds. The resulting schema is unchanged; it
+   is compared against the previous implementation in the test suite.
+
+   Doctrine/dbal does the same thing natively from version 3.4 onwards, which is
+   why the master branch was never affected. Upgrading doctrine/dbal on the 10.16
+   branch is not an option, because its 3.x line changes public API that
+   third-party apps use.
+
+   https://github.com/owncloud/core/pull/41815
+   https://github.com/owncloud/core/pull/41819
+
+* Bugfix - Release the file handle when a bitmap preview cannot be decoded: [#41835](https://github.com/owncloud/core/pull/41835)
+
+   Bitmap previews closed the file they had opened only when decoding succeeded, so
+   every file that could not be decoded leaked a file handle for the lifetime of
+   the process.
+
+   A file that cannot be opened at all is now reported as having no preview right
+   away, instead of travelling on until ImageMagick rejects the empty content and
+   an unrelated warning plus a misleading decoder error have been logged.
+
+   https://github.com/owncloud/core/pull/41835
+   https://github.com/owncloud/core/pull/41837
+
+* Bugfix - Report a preview file that cannot be opened without logging noise: [#41855](https://github.com/owncloud/core/pull/41855)
+
+   Generating an SVG preview read the file without checking that it had been
+   opened. A file the storage could not open, or one whose name the filesystem
+   rejects, still fell back to a media type icon, but only after warning about the
+   read and then logging ImageMagick's complaint about content it had never
+   received. The bitmap providers shared that gap for one of the two values an
+   unsuccessful open can return.
+
+   Generating an SVG preview for a file that opened but then failed to be read - an
+   encrypted file with a missing or damaged key, for instance - already fell back
+   to the icon, but held the file handle and its lock until the request ended. The
+   bitmap providers were not affected by this one.
+
+   Both providers now check the handle before reading, so such a file gets the
+   media type icon with nothing logged that points at the wrong cause, and the SVG
+   provider releases the handle whether or not the read succeeds.
+
+   https://github.com/owncloud/core/pull/41855
+   https://github.com/owncloud/core/pull/41863
+
+* Bugfix - Restrict federated address book sync to the trusted server: [#41869](https://github.com/owncloud/core/pull/41869)
+
+   The federated system address book sync could request resources that do not
+   belong to the trusted server it was syncing with, and could follow redirects
+   away from that server.
+
+   Requests which would leave the trusted server are now refused, and resource
+   references which do not belong to it are skipped and logged.
+
+   https://github.com/owncloud/core/pull/41869
+   https://github.com/owncloud/core/pull/41870
+
+* Change - Update PHP dependencies: [#41787](https://github.com/owncloud/core/pull/41787)
+
+   The following have been updated:
+
+   * deepdiver/zipstreamer (2.0.3 to 3.0.1)
+
+   * dg/composer-cleaner (v2.2.1 to v2.2.2)
+
+   * guzzlehttp/guzzle (7.15.3 to 7.15.5)
+
+   * guzzlehttp/promises (2.5.2 to 2.5.3)
+
+   * guzzlehttp/psr7 (2.13.0 to 2.13.1)
+
+   * monolog/monolog (2.11.0 to 2.11.1)
+
+   * nikic/php-parser (v5.7.0 to v5.9.0)
+
+   * pear/archive_tar (1.6.0 to 1.6.1)
+
+   * phpseclib/phpseclib (3.0.56 to 3.0.57)
+
+   * pimple/pimple (v3.6.1 to v3.6.2)
+
+   * punic/punic (3.8.1 to 3.8.2)
+
+   * rhukster/dom-sanitizer (1.0.14 to 1.0.17)
+
+   * sabre/dav (4.7.0 to 4.7.1)
+
+   * sabre/event (5.1.7 to 5.1.9)
+
+   * sabre/vobject (4.5.8 to 4.6.1)
+
+   https://github.com/owncloud/core/pull/41787
+   https://github.com/owncloud/core/pull/41788
+   https://github.com/owncloud/core/pull/41793
+   https://github.com/owncloud/core/pull/41810
+   https://github.com/owncloud/core/pull/41830
+   https://github.com/owncloud/core/pull/41843
+
+* Change - Stricter handling of service handler configuration: [#41803](https://github.com/owncloud/core/pull/41803)
+
+   The appconfig endpoints (`core/ajax/appconfig` and `/settings/appconfig`) no
+   longer read or write the `public_`/`remote_` keys of the `core` app, nor keys of
+   `core` outside `[a-zA-Z0-9_.-]{1,64}`. Scripts which need a handler path should
+   read it with `occ config:app:get`.
+
+   Requesting a service which is not registered now answers 404 on both
+   `public.php` and `remote.php`; refusals on `remote.php` answer 503.
+
+   https://github.com/owncloud/core/pull/41803
+
+* Change - Previews are decoded in the format of the file extension: [#41834](https://github.com/owncloud/core/pull/41834)
+
+   A file whose extension does not match its actual content no longer gets a
+   preview and shows a media type icon instead - for example a JPEG saved as
+   photo.tif. The affected extensions are ai, bw, eps, heic, heif, int, inta, pdf,
+   ps, psd, rgb, rgba, sgi, tif and tiff. Of those providers only SGI and Heic are
+   registered by default, so on a stock install this is visible for bw, int, inta,
+   rgb, rgba, sgi, heic and heif; the rest need their provider enabled in
+   enabledPreviewProviders.
+
+   Font files (otf, pfb, ttf) with mismatched content still get a thumbnail, and
+   real .otf files gain previews they did not have before.
+
+   https://github.com/owncloud/core/pull/41834
+   https://github.com/owncloud/core/pull/41863
+
+# Changelog for ownCloud Core [11.0.0] (2026-07-30)
+
+The following sections list the changes in ownCloud core 11.0.0 relevant to
+ownCloud admins and users.
+
+[11.0.0]: https://github.com/owncloud/core/compare/v10.16.4...v11.0.0
+
+## Summary
+
+* Security - Prevent params body from overriding validated occ command: [#41577](https://github.com/owncloud/core/pull/41577)
+* Security - Remove plaintext federation auth token from error log: [#41578](https://github.com/owncloud/core/pull/41578)
+* Security - Replace strcmp token oracle with hash-based comparison in federation: [#41579](https://github.com/owncloud/core/pull/41579)
+* Security - Restrict unserialize() allowed classes in CommandJob: [#41582](https://github.com/owncloud/core/pull/41582)
+* Security - Sanitize storage connection error messages returned to clients: [#41585](https://github.com/owncloud/core/pull/41585)
+* Security - Prevent user enumeration via differential password reset UI: [#41586](https://github.com/owncloud/core/pull/41586)
+* Security - Disable group-admin feature by default behind allow_subadmins: [#41634](https://github.com/owncloud/core/pull/41634)
+* Security - Do not trust cached binary paths: [#41732](https://github.com/owncloud/core/pull/41732)
+* Security - Enforce the read permission in the public share preview endpoint: [#41751](https://github.com/owncloud/core/pull/41751)
+* Security - Confine backend provided user homes to the data directory: [#41752](https://github.com/owncloud/core/pull/41752)
+* Security - Encode search highlights before they are returned as a DAV property: [#41760](https://github.com/owncloud/core/pull/41760)
+* Bugfix - Point documentation help links at the latest server docs: [#5132](https://github.com/owncloud/docs/issues/5132)
+* Bugfix - Normalise trashbin original-location PROPFIND response: [#39337](https://github.com/owncloud/core/issues/39337)
+* Bugfix - Add missing space to mail footer signature delimiter: [#41364](https://github.com/owncloud/core/issues/41364)
+* Bugfix - Fix htaccess RewriteBase rules blocking API requests by file extension: [#41418](https://github.com/owncloud/core/issues/41418)
+* Bugfix - Adjust code to avoid PHP8 messages: [#41597](https://github.com/owncloud/core/pull/41597)
+* Bugfix - Support federation between systems in subdirectories: [#41599](https://github.com/owncloud/core/pull/41599)
+* Bugfix - Remove owncloud.com/federation link from federated cloud settings: [#41608](https://github.com/owncloud/core/pull/41608)
+* Bugfix - Fix JS test isolation bugs exposed by Jasmine 5 random test ordering: [#41616](https://github.com/owncloud/core/pull/41616)
+* Bugfix - Honor language on anonymous pages: [#41618](https://github.com/owncloud/core/issues/41618)
+* Bugfix - Decrypt versions and trashbin so encryption can be disabled: [#41623](https://github.com/owncloud/core/issues/41623)
+* Bugfix - Fix user:home:list-dirs and user:home:list-users crashing on PHP 8: [#41630](https://github.com/owncloud/core/issues/41630)
+* Bugfix - Add MIME types for OpenDocument formats: [#41648](https://github.com/owncloud/core/pull/41648)
+* Bugfix - Handle deprecated code related to comments app: [#41656](https://github.com/owncloud/core/pull/41656)
+* Bugfix - Hide navigation icon for apps not enabled for the user: [#41717](https://github.com/owncloud/core/issues/41717)
+* Bugfix - Do not crash on malformed translations: [#41720](https://github.com/owncloud/core/issues/41720)
+* Bugfix - Reject non-numeric avatar crop coordinates: [#41723](https://github.com/owncloud/core/issues/41723)
+* Bugfix - Fix avatar cropper broken by Jcrop 2.0 file rename: [#41723](https://github.com/owncloud/core/issues/41723)
+* Bugfix - Rewire legacy ajax routes to extension-free urls: [#41740](https://github.com/owncloud/core/issues/41740)
+* Bugfix - Request legacy ajax endpoints through the front controller: [#41740](https://github.com/owncloud/core/issues/41740)
+* Change - Update M$ Office icons: [#41347](https://github.com/owncloud/core/pull/41347)
+* Change - No longer store auto loader information in any memory cache: [#41376](https://github.com/owncloud/core/pull/41376)
+* Change - Raise minimum PHP version to 8.3: [#41449](https://github.com/owncloud/core/pull/41449)
+* Change - Update PHP dependencies: [#41450](https://github.com/owncloud/core/pull/41450)
+* Change - Drop command db:convert-type: [#41451](https://github.com/owncloud/core/pull/41451)
+* Change - Removed legacy and deprecated code from ownCloud 11: [#41455](https://github.com/owncloud/core/pull/41455)
+* Change - Use configurable URL for internet connectivity check: [#41506](https://github.com/owncloud/core/pull/41506)
+* Change - Use phan major version 6 code analysis: [#41650](https://github.com/owncloud/core/pull/41650)
+* Change - Remove msteamsbridge config sample: [#41668](https://github.com/owncloud/core/pull/41668)
+* Change - G2 code-signing verifier and G1 signature sunset: [#41680](https://github.com/owncloud/core/pull/41680)
+* Change - Remove occ integrity:sign-app and integrity:sign-core commands: [#41712](https://github.com/owncloud/core/pull/41712)
+* Change - Remove the caching router: [#41733](https://github.com/owncloud/core/pull/41733)
+* Change - Keep host local caches in the local cache tier: [#41734](https://github.com/owncloud/core/pull/41734)
+* Change - Cover HTML metacharacters in the username validation allow-list: [#41738](https://github.com/owncloud/core/pull/41738)
+* Change - Expose createLocal() on ICacheFactory: [#41753](https://github.com/owncloud/core/pull/41753)
+* Change - Escape group names in the users administration group list: [#41758](https://github.com/owncloud/core/pull/41758)
+* Change - Honour the write hook veto on legacy chunked WebDAV uploads: [#41762](https://github.com/owncloud/core/pull/41762)
+
+## Details
+
+* Security - Prevent params body from overriding validated occ command: [#41577](https://github.com/owncloud/core/pull/41577)
+
+   OccController validated the URL-path command against an allowlist but then
+   merged it with user-supplied params via array_merge, allowing a command key in
+   the request body to overwrite the validated value. An authenticated caller with
+   the updater secret could use this to execute any occ command regardless of the
+   allowlist. The params array is now stripped of any command key before the merge.
+
+   https://github.com/owncloud/core/pull/41577
+
+* Security - Remove plaintext federation auth token from error log: [#41578](https://github.com/owncloud/core/pull/41578)
+
+   When getSharedSecret received an invalid token it logged both the submitted
+   value and the expected valid token in plaintext. Since the endpoint is public,
+   any unauthenticated caller could trigger this log entry at will for any trusted
+   server URL, exposing the valid token to anyone with log-read access.
+
+   A second leak in the same code path has also been closed: the GetSharedSecret
+   background job sends the token as a GET query parameter, so on an unexpected
+   HTTP response the Guzzle exception - whose message embeds the full request URI
+   including "?token=..." - was logged verbatim. Both log sites no longer emit the
+   token value.
+
+   https://github.com/owncloud/core/pull/41578
+
+* Security - Replace strcmp token oracle with hash-based comparison in federation: [#41579](https://github.com/owncloud/core/pull/41579)
+
+   The requestSharedSecret endpoint used strcmp() to compare caller-supplied and
+   stored federation tokens, returning different HTTP responses based on
+   lexicographic ordering. This allowed an unauthenticated attacker to recover the
+   stored token via binary search in approximately 96 requests. Tokens are now
+   compared by their SHA-256 hashes, removing the plaintext oracle while preserving
+   the tiebreaking behaviour.
+
+   https://github.com/owncloud/core/pull/41579
+
+* Security - Restrict unserialize() allowed classes in CommandJob: [#41582](https://github.com/owncloud/core/pull/41582)
+
+   CommandJob::run() called unserialize() without the allowed_classes option on
+   data sourced from the oc_jobs database table. An attacker with database write
+   access could inject a crafted PHP object payload to trigger gadget chains from
+   bundled libraries and achieve remote code execution. Deserialization is now
+   restricted to verified ICommand implementations only.
+
+   https://github.com/owncloud/core/pull/41582
+
+* Security - Sanitize storage connection error messages returned to clients: [#41585](https://github.com/owncloud/core/pull/41585)
+
+   The external storage status handler returned raw exception messages including
+   Guzzle cURL error details such as resolved IP addresses and port numbers in the
+   JSON response. This allowed authenticated users to distinguish connection states
+   and map internal network topology. The full exception is now logged server-side
+   only; a generic message is returned to the client.
+
+   https://github.com/owncloud/core/pull/41585
+
+* Security - Prevent user enumeration via differential password reset UI: [#41586](https://github.com/owncloud/core/pull/41586)
+
+   The login form showed a "Reset it?" link only when a valid user on a backend
+   that supports password changes was detected. LDAP users produced a different
+   response than non-existent users, allowing unauthenticated enumeration of
+   accounts on those backends. The backend capability check has been removed; the
+   reset link is now shown uniformly regardless of user existence or backend type.
+
+   https://github.com/owncloud/core/pull/41586
+
+* Security - Disable group-admin feature by default behind allow_subadmins: [#41634](https://github.com/owncloud/core/pull/41634)
+
+   Disable the subadmin (group-admin) feature by default behind a new
+   allow_subadmins system config, as a security risk-mitigation. The feature's code
+   path has known security shortcomings; deployments that rely on it can opt back
+   in with 'allow_subadmins' => true in config.php. On upgrade, existing
+   group-admin assignments are ignored until an admin sets 'allow_subadmins' =>
+   true in config.php.
+
+   https://github.com/owncloud/core/pull/41634
+
+* Security - Do not trust cached binary paths: [#41732](https://github.com/owncloud/core/pull/41732)
+
+   The paths of the helper binaries used to render previews - ffmpeg, avconv and
+   AtomicParsley - were cached in the distributed memory cache and used without
+   being checked, then interpolated unquoted into the shell commands built from
+   them. A cached path is now stored in the host local cache tier only, is
+   validated before it is used, and is quoted when the command line is assembled.
+
+   https://github.com/owncloud/core/pull/41732
+
+* Security - Enforce the read permission in the public share preview endpoint: [#41751](https://github.com/owncloud/core/pull/41751)
+
+   The public share preview endpoint resolved the share by token and rendered the
+   requested file without consulting the share's permission bitmask. It now returns
+   404 when the share does not carry the read permission, which makes it consistent
+   with ShareController::downloadShare() and the public WebDAV route.
+
+   https://github.com/owncloud/core/pull/41751
+
+* Security - Confine backend provided user homes to the data directory: [#41752](https://github.com/owncloud/core/pull/41752)
+
+   A user backend can supply a per user home directory - the LDAP backend for
+   instance can be configured to read it from a user attribute such as
+   homeDirectory. The account sync accepted that value after nothing more than a
+   check for a leading slash, so a home pointing at the ownCloud code directory
+   turned the user's file listing into read and write access to the application's
+   own PHP files. Writing a PHP file into a web reachable location, or modifying
+   one of the shipped ones, results in remote code execution. The relative form was
+   concatenated onto the data directory without normalization, so a value
+   containing ".." escaped it as well.
+
+   A backend provided home is now rejected unless it resolves inside the configured
+   datadirectory. Installations that legitimately keep user homes elsewhere, for
+   example on a separate NFS mount, can list the permitted base directories in the
+   new "user.home_base_dirs" config option. Symlinks are resolved before the
+   comparison, so a symlinked data directory keeps working while a symlink inside
+   it cannot be used to escape. Every entry in the option has to be an absolute
+   path; entries that are not are ignored, because a relative one would be resolved
+   against the working directory of whichever process happens to run the check.
+
+   Note that a home is only set when an account has none yet, so accounts that were
+   provisioned before this change keep the home already stored for them.
+
+   https://github.com/owncloud/core/pull/41752
+   https://github.com/owncloud/user_ldap/pull/849
+
+* Security - Encode search highlights before they are returned as a DAV property: [#41760](https://github.com/owncloud/core/pull/41760)
+
+   The search-highlights property of the files search REPORT returned the
+   elasticsearch highlight fragment unencoded. The fragment is built from file
+   content, so a user who shared a crafted file could place arbitrary markup in the
+   property value. The property deliberately carries HTML - line breaks are
+   substituted with <br/> - so a client rendering it as HTML would execute the
+   injected markup.
+
+   The fragment is now HTML-encoded before the line break substitution, which keeps
+   the intended <br/> markup intact.
+
+   https://github.com/owncloud/core/pull/41760
+
+* Bugfix - Point documentation help links at the latest server docs: [#5132](https://github.com/owncloud/docs/issues/5132)
+
+   Contextual documentation links (setup checks, help & tips, app info.xml keys)
+   were built as /server/<version>/go.php?to=<key> using the running server's
+   concrete version, e.g. /server/10.16/. The documentation site publishes the
+   current stable release only under /server/latest/, so those links resolved to a
+   non-existent version path and 404'd. The version segment now defaults to
+   'latest'; callers may still pass an explicit published version.
+
+   https://github.com/owncloud/docs/issues/5132
+   https://github.com/owncloud/core/pull/41688
+
+* Bugfix - Normalise trashbin original-location PROPFIND response: [#39337](https://github.com/owncloud/core/issues/39337)
+
+   In certain situations the trashbin original-location in a PROPFIND response
+   contained a leading slash. This change ensures that a relative path (without a
+   leading slash) is always returned.
+
+   https://github.com/owncloud/core/issues/39337
+   https://github.com/owncloud/core/pull/41649
+
+* Bugfix - Add missing space to mail footer signature delimiter: [#41364](https://github.com/owncloud/core/issues/41364)
+
+   We've fixed the signature delimiter in the email footer templates. The delimiter
+   on the first line was missing the trailing space required by the signature block
+   convention (RFC 3676), so mail clients were unable to recognize and collapse the
+   signature. The delimiter is now correctly written as "-- " (dash-dash-space).
+
+   https://github.com/owncloud/core/issues/41364
+   https://github.com/owncloud/core/pull/41617
+
+* Bugfix - Fix htaccess RewriteBase rules blocking API requests by file extension: [#41418](https://github.com/owncloud/core/issues/41418)
+
+   Files whose names end in extensions like .jpg, .png, .svg, .json and others
+   could not be marked as favorites or have their tags updated via the files API
+   when htaccess.RewriteBase was configured. The .htaccess rules generated by `occ
+   maintenance:update:htaccess` used a URI extension check to skip routing through
+   index.php, which inadvertently blocked API requests to paths like
+   `/apps/files/api/v1/files/photo.jpg`, returning 405 Method Not Allowed.
+
+   The fix replaces the extension-based condition with `RewriteCond
+   %{REQUEST_FILENAME} !-f`, which correctly routes virtual API paths through
+   index.php while still serving actual static files directly.
+
+   https://github.com/owncloud/core/issues/41418
+
+* Bugfix - Adjust code to avoid PHP8 messages: [#41597](https://github.com/owncloud/core/pull/41597)
+
+   Avoid trying to access array offset on false in the encryption storage wrapper.
+
+   Handle passing null to normalizeUrl in the federation DbHandler.
+
+   https://github.com/owncloud/core/pull/41597
+
+* Bugfix - Support federation between systems in subdirectories: [#41599](https://github.com/owncloud/core/pull/41599)
+
+   If a federated server was installed in a subdirectory like:
+
+   Mydomain.com/cloud
+
+   Then checks to see that the server is up and responding would fail. This problem
+   has been corrected.
+
+   https://github.com/owncloud/core/pull/41599
+
+* Bugfix - Remove owncloud.com/federation link from federated cloud settings: [#41608](https://github.com/owncloud/core/pull/41608)
+
+   The "Add to your website" feature in the personal federation settings was
+   generating a link to https://owncloud.com/federation# which no longer works
+   after owncloud.com was restructured. The federation Cloud ID is now displayed
+   directly without linking to the defunct external page.
+
+   https://github.com/owncloud/core/pull/41608
+
+* Bugfix - Fix JS test isolation bugs exposed by Jasmine 5 random test ordering: [#41616](https://github.com/owncloud/core/pull/41616)
+
+   Several JS test specs left shared singleton state dirty between tests, causing
+   intermittent failures when Jasmine 5 ran tests in random order. Fixed
+   OC._currentMenu leak in fileactionsmenuSpec, stale OCA.Files.fileActions
+   reference causing infinite recursion in files_sharing/appSpec, and stale models
+   in the OC.SystemTags.collection singleton in systemtagsinfoviewSpec and
+   systemtagsinputfieldSpec.
+
+   https://github.com/owncloud/core/pull/41616
+
+* Bugfix - Honor language on anonymous pages: [#41618](https://github.com/owncloud/core/issues/41618)
+
+   Anonymous pages (the login page and the password-protected public share page)
+   always rendered in English even when default_language was configured or the
+   browser sent a matching Accept-Language header, while authenticated pages were
+   translated correctly. The language factory cached the "en" last-resort fallback
+   as the per-request language, which then short-circuited every later lookup
+   before default_language or Accept-Language could be consulted. The fallback is
+   no longer cached, so anonymous pages honor default_language and Accept-Language.
+
+   https://github.com/owncloud/core/issues/41618
+
+* Bugfix - Decrypt versions and trashbin so encryption can be disabled: [#41623](https://github.com/owncloud/core/issues/41623)
+
+   "occ encryption:decrypt-all" only walked the regular "files" folder, leaving the
+   "encrypted" flag set on entries in "files_versions" and "files_trashbin".
+   Because "occ encryption:disable" refuses while any file cache row is still
+   flagged as encrypted, administrators were left unable to disable encryption even
+   though decrypt-all reported success.
+
+   Decrypt-all now also descends into "files_versions" and "files_trashbin", and
+   the disable command now lists the paths that are still flagged as encrypted
+   together with a hint on how to clean them up, instead of printing a generic
+   message.
+
+   https://github.com/owncloud/core/issues/41623
+   https://github.com/owncloud/core/pull/41624
+
+* Bugfix - Fix user:home:list-dirs and user:home:list-users crashing on PHP 8: [#41630](https://github.com/owncloud/core/issues/41630)
+
+   The occ commands user:home:list-dirs and user:home:list-users --all passed null
+   as the search pattern to IUserManager::search() to mean "all users". On PHP 8
+   the null reached Connection::escapeLikeParameter(string $param) and raised a
+   TypeError, aborting the command. Both commands now pass the empty string, which
+   is the established "match all" sentinel used by every other caller.
+
+   https://github.com/owncloud/core/issues/41630
+
+* Bugfix - Add MIME types for OpenDocument formats: [#41648](https://github.com/owncloud/core/pull/41648)
+
+   Add MIME type mappings for additional OpenDocument formats for file types odc,
+   odi, odm, otc, otg, oth, oti, otp, ots and ott.
+
+   Add MIME type aliases for chart and image formats that were currently missing in
+   the default mimetypealiases.dist.json file.
+
+   Update mimetypelist.js using ./occ maintenance:mimetype:update-js
+
+   https://github.com/owncloud/core/pull/41648
+
+* Bugfix - Handle deprecated code related to comments app: [#41656](https://github.com/owncloud/core/pull/41656)
+
+   Code paths that caused deprecation warnings in PHP 8 have been corrected.
+
+   https://github.com/owncloud/core/pull/41656
+
+* Bugfix - Hide navigation icon for apps not enabled for the user: [#41717](https://github.com/owncloud/core/issues/41717)
+
+   Apps that were enabled only for a specific group still showed their navigation
+   icon in the top-left app menu for every user, including users who were not in
+   that group. Clicking the icon then bounced the user back to the Files app. The
+   navigation manager now skips apps that are not enabled for the current user,
+   mirroring the per-user check already used for the web navigation entry.
+
+   https://github.com/owncloud/core/issues/41717
+
+* Bugfix - Do not crash on malformed translations: [#41720](https://github.com/owncloud/core/issues/41720)
+
+   Changing the language (and any request that rendered a translated string with
+   parameters) could return an HTTP 500 error. On PHP 8 vsprintf() throws a
+   ValueError instead of returning false when a translation's format specifiers do
+   not match the supplied arguments — a common result of translators turning "%s"
+   into "% s" or "%S", or dropping a specifier. OC_L10N_String::__toString() did
+   not guard against this, so a single malformed translation string in a shipped
+   language file crashed the whole request. Such translations now fall back to the
+   untranslated source text so the request still succeeds.
+
+   https://github.com/owncloud/core/issues/41720
+
+* Bugfix - Reject non-numeric avatar crop coordinates: [#41723](https://github.com/owncloud/core/issues/41723)
+
+   Submitting a profile picture crop with empty or non-numeric coordinates hit the
+   image cropping code with invalid values. On PHP 8 this raised a TypeError from
+   round() and returned an HTTP 500; on PHP 7 it silently produced a broken crop.
+   The client sends empty coordinates (crop[x]=&crop[y]=...) whenever the cropper
+   failed to produce a selection. postCroppedAvatar now validates that all four
+   coordinates are numeric and returns a clean HTTP 400 otherwise, instead of
+   crashing.
+
+   https://github.com/owncloud/core/issues/41723
+   https://github.com/owncloud/core/pull/41725
+
+* Bugfix - Fix avatar cropper broken by Jcrop 2.0 file rename: [#41723](https://github.com/owncloud/core/issues/41723)
+
+   Uploading a non-square profile picture opened a cropper that immediately failed
+   with "$cropperImage.Jcrop is not a function". Bumping the Jcrop dependency from
+   0.9.12 to 2.0.4 renamed its distribution files from js/jquery.Jcrop.js and
+   css/jquery.Jcrop.css to js/Jcrop.js and css/Jcrop.css, but the personal profile
+   template still referenced the old paths. The script therefore failed to load,
+   the plugin never registered on jQuery, and the cropper could not be shown. The
+   template now loads the renamed Jcrop assets.
+
+   Original Jcrop PR: https://github.com/owncloud/core/pull/38666
+
+   https://github.com/owncloud/core/issues/41723
+   https://github.com/owncloud/core/pull/41724
+
+* Bugfix - Rewire legacy ajax routes to extension-free urls: [#41740](https://github.com/owncloud/core/issues/41740)
+
+   The front controller rewrite only forwards a request to index.php when the
+   requested path does not exist on disk. A legacy route whose declared url was
+   itself a real file - for example /settings/ajax/setlanguage.php - therefore
+   never reached the router: the web server executed the script directly, without
+   the bootstrap index.php would have performed, and the request died with `Class
+   "OC" not found` (HTTP 500). Changing the personal language setting, the share
+   dialog e-mail lookup, the trashbin and public link preview thumbnails and the
+   Google Drive OAuth entry point were affected.
+
+   Every such route url has lost its .php suffix so that no route url resolves to a
+   file on disk any more, and the affected javascript callers now build routed urls
+   through OC.generateUrl(). Route names are unchanged, so linkToRoute() callers
+   keep working. The legacy .php urls are gone and no alias is provided - an alias
+   would re-introduce the very shadowing this change removes. /core/ajax/update.php
+   keeps its suffix by design: it bootstraps itself and is excluded from the
+   rewrite. Five routes whose include target no longer existed were removed.
+   Third-party apps posting to their own shadowed .php route urls need the same
+   treatment.
+
+   https://github.com/owncloud/core/issues/41740
+   https://github.com/owncloud/core/pull/41742
+
+* Bugfix - Request legacy ajax endpoints through the front controller: [#41740](https://github.com/owncloud/core/issues/41740)
+
+   The front controller rewrite only forwards a request to index.php when the
+   requested path does not exist on disk. Five javascript call sites requested a
+   url that was itself a real file, so the web server executed the script directly,
+   without the bootstrap index.php would have performed, and the request died with
+   a fatal error (HTTP 500): changing the personal language, the share dialog
+   e-mail lookup, the Google Drive OAuth entry point, and the trashbin and public
+   link preview thumbnails.
+
+   All five now build their url with an explicit /index.php/ prefix so that the
+   request no longer matches a file on disk and reaches the router. The prefix has
+   to be part of the url literal because OC.generateUrl() omits /index.php when
+   mod_rewrite is active, which is how four of the five came to request the
+   shadowed url in the first place.
+
+   https://github.com/owncloud/core/issues/41740
+   https://github.com/owncloud/core/pull/41743
+
+* Change - Update M$ Office icons: [#41347](https://github.com/owncloud/core/pull/41347)
+
+   Icons have been updated according to the M$ cloud storage partner program
+
+   https://github.com/owncloud/core/pull/41347
+
+* Change - No longer store auto loader information in any memory cache: [#41376](https://github.com/owncloud/core/pull/41376)
+
+   With composer managing auto loading for a long time this is no longer necessary.
+
+   https://github.com/owncloud/core/pull/41376
+
+* Change - Raise minimum PHP version to 8.3: [#41449](https://github.com/owncloud/core/pull/41449)
+
+   The minimum required PHP version is now 8.3. Numerous PHP 8.x deprecation
+   warnings were resolved across the codebase, the mail subsystem was migrated to
+   symfony/mailer, the unused ext-apc requirement was dropped, and the PHP version
+   check now runs early in lib/base.php.
+
+   https://github.com/owncloud/core/pull/41449
+
+* Change - Update PHP dependencies: [#41450](https://github.com/owncloud/core/pull/41450)
+
+   The following have been updated:
+
+   * doctrine/dbal (2.13.9 to 3.10.6)
+
+   * firebase/php-jwt (7.0.5 to 7.1.0)
+
+   * google/apiclient (v2.19.0 to v2.19.4)
+
+   * google/apiclient-services (v0.435.0 to v0.452.0)
+
+   * google/auth (v1.50.0 to v1.53.0)
+
+   * guzzlehttp/guzzle (7.10.0 to 7.15.2)
+
+   * guzzlehttp/promises (2.3.0 to 2.5.1)
+
+   * guzzlehttp/psr7 (2.8.0 to 2.13.0)
+
+   * laravel/serializable-closure (v2.0.10 to v2.0.15)
+
+   * league/mime-type-detection (1.16.0 to 1.17.0)
+
+   * phpseclib/phpseclib (3.0.49 to 3.0.55)
+
+   * pimple/pimple (3.6.1 to 3.6.2)
+
+   * sabre/dav (4.7.0 to 4.7.1)
+
+   * sabre/event (5.1.7 to 5.1.8)
+
+   * sabre/vobject (4.5.8 to 4.6.1)
+
+   * symfony/console (v7.4.7 to v7.4.14)
+
+   * symfony/event-dispatcher (v7.4.9 to v7.4.14)
+
+   * symfony/mailer (v7.4.6 to v7.4.14)
+
+   * symfony/process (v7.4.5 to v7.4.13)
+
+   * symfony/routing (v7.4.6 to v7.4.13)
+
+   * symfony/string (v7.4.6 to v7.4.13)
+
+   * symfony/translation (v7.4.6 to v7.4.14)
+
+   * symfony/deprecation-contracts (v3.6.0 to v3.7.1)
+
+   * symfony/event-dispatcher-contracts (v3.7.0 to v3.7.1)
+
+   * symfony/service-contracts (v3.7.0 to v3.7.1)
+
+   * symfony/translation-contracts (v3.6.1 to v3.7.1)
+
+   https://github.com/owncloud/core/pull/41450
+   https://github.com/owncloud/core/pull/41477
+   https://github.com/owncloud/core/pull/41495
+   https://github.com/owncloud/core/pull/41561
+   https://github.com/owncloud/core/pull/41564
+   https://github.com/owncloud/core/pull/41569
+   https://github.com/owncloud/core/pull/41590
+   https://github.com/owncloud/core/pull/41613
+   https://github.com/owncloud/core/pull/41619
+   https://github.com/owncloud/core/pull/41626
+   https://github.com/owncloud/core/pull/41635
+   https://github.com/owncloud/core/pull/41639
+   https://github.com/owncloud/core/pull/41652
+   https://github.com/owncloud/core/pull/41660
+   https://github.com/owncloud/core/pull/41666
+   https://github.com/owncloud/core/pull/41670
+   https://github.com/owncloud/core/pull/41677
+   https://github.com/owncloud/core/pull/41681
+   https://github.com/owncloud/core/pull/41691
+   https://github.com/owncloud/core/pull/41697
+   https://github.com/owncloud/core/pull/41709
+   https://github.com/owncloud/core/pull/41756
+
+* Change - Drop command db:convert-type: [#41451](https://github.com/owncloud/core/pull/41451)
+
+   This experimental command is untested and unsupported and therefore removed.
+
+   https://github.com/owncloud/core/pull/41451
+
+* Change - Removed legacy and deprecated code from ownCloud 11: [#41455](https://github.com/owncloud/core/pull/41455)
+
+   The following have been removed:
+
+   * class OC_DB
+
+   * class OC_DB_StatementWrapper
+
+   * class OC_Group_Backend
+
+   * class OC_Group_Database
+
+   * class OC_OCS_Result
+
+   * class \OCP\DB
+
+   * class MDBSchemaWriter
+
+   * interface OC_Group_Interface
+
+   * interface OC_User_Interface
+
+   * method MDB2SchemaManager::getDbStructure()
+
+   * method MDB2SchemaManager::generateChangeScript()
+
+   https://github.com/owncloud/core/pull/41455
+   https://github.com/owncloud/core/pull/41458
+   https://github.com/owncloud/core/pull/41462
+   https://github.com/owncloud/core/pull/41464
+   https://github.com/owncloud/core/pull/41468
+
+* Change - Use configurable URL for internet connectivity check: [#41506](https://github.com/owncloud/core/pull/41506)
+
+   Default URL is now configurable and the default is set to an independent
+   resource: https://detectportal.firefox.com/success.txt This also provides an
+   IPv6 compatible URL.
+
+   https://github.com/owncloud/core/issues/41465
+   https://github.com/owncloud/core/pull/41506
+
+* Change - Use phan major version 6 code analysis: [#41650](https://github.com/owncloud/core/pull/41650)
+
+   Now that PHP 7 support has been dropped, we can use the latest release of the
+   phan code analyser.
+
+   Patch releases before 6.0.7 had a problem with the function signatures for some
+   Redis methods. That was corrected in https://github.com/phan/phan/pull/5546 and
+   released in phan version 6.0.7. So that version is required as the minimum here.
+
+   https://github.com/owncloud/core/pull/41650
+
+* Change - Remove msteamsbridge config sample: [#41668](https://github.com/owncloud/core/pull/41668)
+
+   The owncloud/msteamsbridge integration app is being archived and is no longer
+   maintained. Its Microsoft Teams Bridge config sample block has been removed from
+   config.apps.sample.php so the config-to-docs sync no longer re-adds the
+   parameters to the admin documentation.
+
+   https://github.com/owncloud/core/pull/41668
+
+* Change - G2 code-signing verifier and G1 signature sunset: [#41680](https://github.com/owncloud/core/pull/41680)
+
+   We've replaced the app-signature verification with a new G2 code-signing
+   verifier that validates the full certificate chain against bundled trust
+   anchors, enforces an algorithm allowlist, and checks a fail-closed CRL for
+   revocation.
+
+   Existing G1-signed apps continue to verify during the transition. However, all
+   G1 signatures stop verifying on 2027-01-01 (the hardcoded sunset at
+   2026-12-31T23:59:59Z), regardless of individual certificate expiry. After that
+   cutoff, affected apps must be re-signed with a G2 certificate to install or pass
+   integrity verification. Administrators running third-party apps signed under G1
+   should plan for re-signed releases ahead of that date.
+
+   https://github.com/owncloud/core/pull/41680
+
+* Change - Remove occ integrity:sign-app and integrity:sign-core commands: [#41712](https://github.com/owncloud/core/pull/41712)
+
+   We've removed the occ integrity:sign-app and integrity:sign-core console
+   commands along with the signing-only code in the integrity checker
+   (createSignatureData, writeAppSignature and writeCoreSignature). Code signing is
+   a release and CI concern rather than an operator action performed against a
+   running instance, so this code was dead weight in the security-sensitive
+   integrity subsystem.
+
+   Integrity verification is unaffected: the integrity:check-app and
+   integrity:check-core commands and all signature verification continue to work as
+   before.
+
+   https://github.com/owncloud/core/pull/41712
+
+* Change - Remove the caching router: [#41733](https://github.com/owncloud/core/pull/41733)
+
+   Generated urls are no longer stored in the memory cache. Measurement showed
+   generating a url to be faster than a cache round trip, so the cache only added a
+   place where urls could go stale or be tampered with.
+
+   https://github.com/owncloud/core/pull/41733
+
+* Change - Keep host local caches in the local cache tier: [#41734](https://github.com/owncloud/core/pull/41734)
+
+   The image paths of the active theme and the mimetype id map were stored in the
+   distributed memory cache although both are derived from the files and the
+   database of a single instance. They now use the host local cache tier and their
+   entries expire, so a stale entry is scoped to one node and no longer lives
+   forever. The repair step for mimetypes deletes rows from the mimetype table and
+   now clears the mimetype cache afterwards, and occ upgrade clears both cache
+   tiers instead of only the distributed one.
+
+   https://github.com/owncloud/core/pull/41734
+
+* Change - Cover HTML metacharacters in the username validation allow-list: [#41738](https://github.com/owncloud/core/pull/41738)
+
+   The username allow-list in OC\User\Manager::createUser() already rejects every
+   character outside "a-z", "A-Z", "0-9" and "+_.@-'", which blocks HTML and script
+   metacharacters from ever reaching a stored username. That behaviour was only
+   covered by three generic invalid-character cases, none of which resembled an
+   injection payload.
+
+   The invalid-character data provider now also exercises quote, angle-bracket and
+   full script-tag payloads, so any future relaxation of the allow-list that would
+   let markup into a username fails the test suite instead of passing unnoticed.
+   This is test-only coverage; no production behaviour changes.
+
+   https://github.com/owncloud/core/pull/41738
+
+* Change - Expose createLocal() on ICacheFactory: [#41753](https://github.com/owncloud/core/pull/41753)
+
+   The cache factory has always been able to hand out a cache from the host local
+   tier, but the method was missing from the public ICacheFactory interface, so
+   core had to ask for it defensively and apps had no way to use it at all. It is
+   now part of the interface, which lets values that are only meaningful on the
+   machine that produced them be kept out of the cache shared between the nodes of
+   an installation.
+
+   Note for app developers: a class implementing OCP\ICacheFactory has to declare
+   createLocal() from this release on.
+
+   https://github.com/owncloud/core/pull/41753
+
+* Change - Escape group names in the users administration group list: [#41758](https://github.com/owncloud/core/pull/41758)
+
+   The group list in the users administration panel built each list item by
+   concatenating the group id and group name into an HTML string, so both values
+   were interpreted as markup rather than text. Unlike usernames, group names are
+   not restricted to an allow-listed character set - Group\Manager::createGroup()
+   only rejects empty and untrimmed names - so a name containing HTML characters
+   was not rendered verbatim. Both interpolated values are now passed through
+   escapeHTML(), which makes the encoding consistent with the user rows, and the
+   behaviour is covered by tests in settings/tests/js/users/groupsSpec.js.
+
+   https://github.com/owncloud/core/pull/41758
+
+* Change - Honour the write hook veto on legacy chunked WebDAV uploads: [#41762](https://github.com/owncloud/core/pull/41762)
+
+   The legacy WebDAV chunked upload path assembled the final file without
+   respecting the pre-write hook result, so the filename blacklist that applies to
+   ordinary uploads was not enforced for chunked uploads. The chunked assembly now
+   aborts when a write hook vetoes the file, matching the non-chunked upload path.
+
+   https://github.com/owncloud/core/pull/41762
+
+# Changelog for ownCloud Core [10.16.4] (2026-07-29)
+
+The following sections list the changes in ownCloud core 10.16.4 relevant to
+ownCloud admins and users.
+
+[10.16.4]: https://github.com/owncloud/core/compare/v10.16.3...v10.16.4
+
+## Summary
+
+* Bugfix - Fix subadmin email change updating caller's address instead of target's: [#41574](https://github.com/owncloud/core/pull/41574)
+* Change - Honour the write hook veto on legacy chunked WebDAV uploads: [#41763](https://github.com/owncloud/core/pull/41763)
+
+## Details
+
+* Bugfix - Fix subadmin email change updating caller's address instead of target's: [#41574](https://github.com/owncloud/core/pull/41574)
+
+   The verification token and confirmation link in the subadmin path of
+   setMailAddress were associated with the caller's account instead of the target
+   user's account. Clicking the confirmation link changed the subadmin's email
+   rather than the intended target's email.
+
+   https://github.com/owncloud/core/pull/41574
+
+* Change - Honour the write hook veto on legacy chunked WebDAV uploads: [#41763](https://github.com/owncloud/core/pull/41763)
+
+   The legacy WebDAV chunked upload path assembled the final file without
+   respecting the pre-write hook result, so the filename blacklist that applies to
+   ordinary uploads was not enforced for chunked uploads. The chunked assembly now
+   aborts when a write hook vetoes the file, matching the non-chunked upload path.
+
+   https://github.com/owncloud/core/pull/41763
+
+# Changelog for ownCloud Core [10.16.3] (2026-05-22)
+
+The following sections list the changes in ownCloud core 10.16.3 relevant to
+ownCloud admins and users.
+
+[10.16.3]: https://github.com/owncloud/core/compare/v10.16.2...v10.16.3
+
+## Summary
+
+* Security - Update phpseclib to 3.0.52 for CVE-2026-40194: [#41529](https://github.com/owncloud/core/pull/41529)
+* Security - Restrict AppConfigController read methods to full admins only: [#41550](https://github.com/owncloud/core/pull/41550)
+* Security - Update symfony/routing to 5.4.52 for CVE-2026-45065: [#41559](https://github.com/owncloud/core/pull/41559)
+* Bugfix - Prevent mounting local storage if not allowed: [#41538](https://github.com/owncloud/core/pull/41538)
+* Bugfix - Use the correct user ID when changing email via admin API: [#41539](https://github.com/owncloud/core/pull/41539)
+* Bugfix - Prevent IDOR in WebDAV comments API: [#41558](https://github.com/owncloud/core/pull/41558)
+
+## Details
+
+* Security - Update phpseclib to 3.0.52 for CVE-2026-40194: [#41529](https://github.com/owncloud/core/pull/41529)
+
+   CVE-2026-40194: Timing attack vulnerability in SSH binary packet processing.
+   Upgraded phpseclib/phpseclib from 3.0.50 to 3.0.52.
+
+   https://github.com/owncloud/core/pull/41529
+   https://github.com/owncloud/core/pull/41541
+   https://github.com/phpseclib/phpseclib/releases/tag/3.0.51
+
+* Security - Restrict AppConfigController read methods to full admins only: [#41550](https://github.com/owncloud/core/pull/41550)
+
+   Subadmin users could read all oc_appconfig values including SMTP passwords, LDAP
+   bind credentials, and encryption master keys via the Settings API. Removed
+   @NoAdminRequired from getApps, getKeys, and getValue so that the AdminMiddleware
+   enforces full-admin-only access, consistent with the write methods.
+
+   https://github.com/owncloud/core/pull/41550
+
+* Security - Update symfony/routing to 5.4.52 for CVE-2026-45065: [#41559](https://github.com/owncloud/core/pull/41559)
+
+   CVE-2026-45065: UrlGenerator route-requirement bypass via unanchored regex
+   alternation allowing off-site URL injection. Upgraded symfony/routing from
+   5.4.48 to 5.4.52.
+
+   https://github.com/owncloud/core/pull/41559
+   https://symfony.com/cve-2026-45065
+
+* Bugfix - Prevent mounting local storage if not allowed: [#41538](https://github.com/owncloud/core/pull/41538)
+
+   Mounting a local storage was possible if the internal class name was used as
+   backend, despite local storage not allowed to be mounted. This problem is fixed
+   and the local storage can't be mounted if it was explicitly disallowed in the
+   configuration.
+
+   https://github.com/owncloud/core/pull/41538
+
+* Bugfix - Use the correct user ID when changing email via admin API: [#41539](https://github.com/owncloud/core/pull/41539)
+
+   The admin API endpoint for changing a user's email address was incorrectly using
+   the requesting admin's user ID instead of the target user's ID, causing the
+   admin's email to be updated rather than the intended user's.
+
+   https://github.com/owncloud/core/pull/41539
+
+* Bugfix - Prevent IDOR in WebDAV comments API: [#41558](https://github.com/owncloud/core/pull/41558)
+
+   Authenticated users could read, edit, or delete comments on files they have no
+   access to by supplying an arbitrary comment ID in the WebDAV comments endpoint.
+   The fix verifies that a requested comment belongs to the file in the URL before
+   returning it.
+
+   https://github.com/owncloud/core/pull/41558
+
+# Changelog for ownCloud Core [10.16.2] (2026-04-02)
+
+The following sections list the changes in ownCloud core 10.16.2 relevant to
+ownCloud admins and users.
+
+[10.16.2]: https://github.com/owncloud/core/compare/v10.16.1...v10.16.2
+
+## Summary
+
+* Change - Update dependencies: [#41518](https://github.com/owncloud/core/pull/41518)
+
+## Details
+
+* Change - Update dependencies: [#41518](https://github.com/owncloud/core/pull/41518)
+
+   The following have been updated: - phpseclib/phpseclib (3.0.49 to 3.0.50) -
+   minimatch (3.1.2 to 3.1.5) - underscore.js (1.13.6 to 1.13.8) - brace-expansion
+   (1.1.12 to 1.1.13)
+
+   https://github.com/owncloud/core/pull/41518
+
+# Changelog for ownCloud Core [10.16.1] (2026-02-18)
+
+The following sections list the changes in ownCloud core 10.16.1 relevant to
+ownCloud admins and users.
+
+[10.16.1]: https://github.com/owncloud/core/compare/v10.16.0...v10.16.1
+
+## Summary
+
+* Bugfix - Apply SVG sanitization to all file content before using ImageMagick: [#41433](https://github.com/owncloud/core/pull/41433)
+* Bugfix - Disallow empty tokens when pairing trusted servers: [#41434](https://github.com/owncloud/core/pull/41434)
+* Change - Update PHP dependencies: [#41408](https://github.com/owncloud/core/pull/41408)
+* Enhancement - Add mimetype aliases/mapping for .toml and .ovpn: [#41431](https://github.com/owncloud/core/pull/41431)
+
+## Details
+
+* Bugfix - Apply SVG sanitization to all file content before using ImageMagick: [#41433](https://github.com/owncloud/core/pull/41433)
+
+   Any file content is now sanitized for SVG threats before being processed by
+   ImageMagick, preventing potential security vulnerabilities.
+
+   https://github.com/owncloud/core/pull/41433
+
+* Bugfix - Disallow empty tokens when pairing trusted servers: [#41434](https://github.com/owncloud/core/pull/41434)
+
+   An empty token could be used to pair trusted servers, which is not secure.
+
+   https://github.com/owncloud/core/pull/41434
+
 * Change - Update PHP dependencies: [#41408](https://github.com/owncloud/core/pull/41408)
 
-   The following have been updated: - phpseclib/phpseclib (3.0.46 to 3.0.47) -
-   sabre/http (5.1.12 to 5.1.13)
+   The following have been updated: - monolog/monolog (2.10.0 to 2.11.0) -
+   pear/pear-core-minimal (v1.10.16 to v1.10.18) - phpseclib/phpseclib (3.0.47 to
+   3.0.48) - phpseclib/phpseclib (3.0.46 to 3.0.49) - pimple/pimple (3.5.0 to
+   3.6.0) - sabre/http (5.1.12 to 5.1.13) - sabre/vobject (4.5.7 to 4.5.8) -
+   symfony/process (5.4.47 to 5.4.51) - theseer/tokenizer (1.2.3 to 1.3.1)
 
    https://github.com/owncloud/core/pull/41408
+   https://github.com/owncloud/core/pull/41421
+   https://github.com/owncloud/core/pull/41446
+
+* Enhancement - Add mimetype aliases/mapping for .toml and .ovpn: [#41431](https://github.com/owncloud/core/pull/41431)
+
+   Mimetype aliases and mapping for .toml and .ovpn files got added.
+
+   https://github.com/owncloud/core/pull/41431
 
 # Changelog for ownCloud Core [10.16.0] (2025-10-23)
 
